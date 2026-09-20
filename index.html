@@ -195,7 +195,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 17</span>
+      <span class="note" id="build" style="cursor:pointer">build 18</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -548,13 +548,19 @@
   // --- what has been posted lately ------------------------------------------
 
   /**
-   * The last three days of postings into Zen, grouped as Sale, Purchase,
-   * Expense, Payment and Receipt.
+   * The last three days of postings into Zen: day by day, and each day split
+   * into Sale, Purchase, Expense, Payment and Receipt.
+   *
+   * A day here is the day it was POSTED, not the date typed on the bill —
+   * that is what makes it a report of the sync. Each row still carries its own
+   * date underneath, so a bill entered late is visible as exactly that.
    *
    * It has NO period picker on purpose. Every other screen answers "how does
    * this period look"; this one answers "what has gone in lately", and a period
    * chosen up in the header would make those two questions look like one.
    */
+  var RECENT_BY = 'day';       // 'day' or 'kind'
+
   function showRecent() {
     mark('showRecent');
     VIEW = 'recent';
@@ -568,35 +574,73 @@
     var ticket = takeTicket();
     api('recent', { token: TOKEN, days: 3 }).then(function (r) {
       if (!stillWanted(ticket)) return;
-      var d = r.data;
-
-      if (!d.groups.length) {
-        $('main').innerHTML = '<div class="empty">Nothing posted since ' +
-          esc(d.from) + '.</div>';
-        return;
-      }
-
-      $('main').innerHTML =
-        '<div class="note" style="margin-bottom:10px">Posted since ' +
-          esc(d.from) + '</div>' +
-        d.groups.map(function (g) {
-          return '<div class="pl">' +
-            '<div class="l head"><span>' + esc(g.kind) + '</span>' +
-            '<span class="v">' + g.count + ' · ' + money(g.total) + '</span></div>' +
-            g.rows.map(function (row) {
-              // The party, then where it came from underneath. Particulars is
-              // the working the sync wrote, which is what makes a bank line
-              // readable without opening the sheet.
-              var sub = [row.date, row.ref, row.via].filter(Boolean).map(esc).join(' · ');
-              return '<div class="l">' +
-                '<span><span class="name">' + esc(row.party || '—') + '</span>' +
-                  '<div class="sub">' + sub +
-                  (row.particulars ? '<br>' + esc(row.particulars) : '') + '</div></span>' +
-                '<span class="v">' + money(row.amount) + '</span></div>';
-            }).join('') +
-          '</div>';
-        }).join('');
+      drawRecent(r.data);
     }).catch(fail);
+  }
+
+  /** One posted entry: party, then where it came from underneath. */
+  function recentRow(row) {
+    // Particulars is the working the sync wrote, which is what makes a bank
+    // line readable without opening the sheet.
+    var sub = [row.date, row.ref, row.via, row.postedAt].filter(Boolean).map(esc).join(' · ');
+    return '<div class="l">' +
+      '<span><span class="name">' + esc(row.party || '—') + '</span>' +
+        '<div class="sub">' + sub +
+        (row.particulars ? '<br>' + esc(row.particulars) : '') + '</div></span>' +
+      '<span class="v">' + money(row.amount) + '</span></div>';
+  }
+
+  /**
+   * A kind and its entries, as a heading line and the rows under it. Nested
+   * under a day it is indented, so the day reads as the heading and the kind as
+   * a part of it rather than the two competing.
+   */
+  function recentGroup(g, nested) {
+    return '<div class="l head' + (nested ? ' sub' : '') + '"><span>' + esc(g.kind) + '</span>' +
+      '<span class="v">' + g.count + ' · ' + money(g.total) + '</span></div>' +
+      g.rows.map(recentRow).join('');
+  }
+
+  function drawRecent(d) {
+    // byDay arrived after the app shipped, so a phone holding a cached build
+    // must still be served by the kind view alone.
+    var days = d.byDay || [];
+
+    if (!d.groups.length) {
+      $('main').innerHTML = '<div class="empty">Nothing posted since ' +
+        esc(d.from) + '.</div>';
+      return;
+    }
+
+    var head =
+      '<div class="bar" style="margin-bottom:10px">' +
+        '<span class="note">Posted since ' + esc(d.from) + '</span>' +
+        (days.length
+          ? '<button class="link" id="recentBy">' +
+              (RECENT_BY === 'day' ? 'By kind' : 'By day') + '</button>'
+          : '') +
+      '</div>';
+
+    var body = (RECENT_BY === 'day' && days.length)
+      ? days.map(function (day) {
+          return '<div class="pl">' +
+            '<div class="l head"><span>' + esc(day.day) + '</span>' +
+            '<span class="v">' + day.count + ' · ' + money(day.total) + '</span></div>' +
+            day.groups.map(function (g) { return recentGroup(g, true); }).join('') +
+          '</div>';
+        }).join('')
+      : d.groups.map(function (g) {
+          return '<div class="pl">' + recentGroup(g) + '</div>';
+        }).join('');
+
+    $('main').innerHTML = head + body;
+
+    if ($('recentBy')) {
+      $('recentBy').onclick = function () {
+        RECENT_BY = RECENT_BY === 'day' ? 'kind' : 'day';
+        drawRecent(d);            // already fetched; no second round trip
+      };
+    }
   }
 
   // --- orders ---------------------------------------------------------------
