@@ -145,17 +145,14 @@
   @media (prefers-color-scheme: dark) { .share { color: #6ddba0; } }
   .empty { color: var(--muted); text-align: center; padding: 40px 20px; }
 
-  .chips {
-    display: flex; gap: 6px; margin-top: 10px; overflow-x: auto;
-    -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px;
-  }
-  .chips::-webkit-scrollbar { display: none; }
-  .chip {
-    flex: 0 0 auto; padding: 6px 12px; font-size: 13px; cursor: pointer;
+  .chips { margin-top: 10px; }
+  /* The period picker. Full width on purpose: it is the one control that says
+     what every figure on the screen covers, so it should not look incidental. */
+  .pick {
+    width: 100%; padding: 9px 12px; font-size: 14px; cursor: pointer;
     color: var(--ink); background: var(--card);
-    border: 1px solid var(--line); border-radius: 999px; white-space: nowrap;
+    border: 1px solid var(--line); border-radius: 10px;
   }
-  .chip.on { color: #fff; background: var(--accent); border-color: var(--accent); }
   .range { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   .range input { padding: 8px 10px; font-size: 14px; }
 
@@ -198,7 +195,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 15</span>
+      <span class="note" id="build" style="cursor:pointer">build 16</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -281,12 +278,53 @@
       });
   }
 
-  function signOut() {
+  function signOut(why) {
     api('logout', { token: TOKEN }).catch(function () {});
     TOKEN = null;
     try { localStorage.removeItem('ledger_token'); } catch (e) {}
     $('app').hidden = true; $('signin').hidden = false;
+    if (typeof why === 'string' && why) {
+      $('err').textContent = why; $('err').hidden = false;
+    }
   }
+
+  // --- ten quiet minutes and the session ends --------------------------------
+
+  /**
+   * The phone lives in a pocket, gets handed to a driver, gets left on a
+   * counter. So an idle session ends — and it ends ON THE SERVER, by calling
+   * logout, not merely by showing the sign-in box again. A token that is still
+   * good is still good to whoever has it.
+   *
+   * The clock is checked on a timer rather than trusted to run down, because a
+   * phone suspends background tabs: a page asleep for an hour would otherwise
+   * wake believing no time had passed.
+   */
+  var IDLE_MINUTES = 10;
+  var idleSince = Date.now(), idleTimer = null;
+
+  function stillHere() {
+    idleSince = Date.now();
+    if (!idleTimer) idleTimer = setInterval(checkIdle, 15000);
+  }
+
+  function checkIdle() {
+    if (!TOKEN) return;
+    if (Date.now() - idleSince < IDLE_MINUTES * 60000) return;
+    signOut('Signed out after ' + IDLE_MINUTES + ' minutes without use.');
+  }
+
+  ['touchstart', 'mousedown', 'keydown', 'scroll'].forEach(function (ev) {
+    document.addEventListener(ev, stillHere, { passive: true });
+  });
+
+  // Coming back to a page that was in the background is the case the timer
+  // alone cannot catch, so it is checked before the clock is reset.
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    checkIdle();
+    if (TOKEN) stillHere();
+  });
 
   /** Any dead token lands here, from any screen, and returns to the login box. */
   function fail(e) {
@@ -323,36 +361,34 @@
     FY = fy;
     PERIOD = { from: fy.from, to: fy.to, label: fy.label };
 
-    var html = '<button class="chip on" data-k="fy">' + esc(fy.label) + '</button>';
+    // One dropdown rather than a row of month chips. Twelve months plus the year
+    // plus Dates… never fitted on a phone, so the later months lived off the
+    // right-hand edge behind a scroll nobody could see.
+    var html = '<select id="periodPick" class="pick">' +
+               '<option value="fy">' + esc(fy.label) + '</option>';
     fy.months.forEach(function (m, i) {
-      html += '<button class="chip" data-k="m' + i + '">' + esc(m.label) + '</button>';
+      html += '<option value="m' + i + '">' + esc(m.label) + ' ' + m.year + '</option>';
     });
-    html += '<button class="chip" data-k="range">Dates…</button>';
+    html += '<option value="range">Dates…</option></select>';
     $('periods').innerHTML = html;
 
-    Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (el) {
-      el.onclick = function () {
-        Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (c) {
-          c.classList.remove('on');
-        });
-        el.classList.add('on');
-        var k = el.dataset.k;
+    $('periodPick').onchange = function () {
+      var k = this.value;
 
-        if (k === 'range') {
-          $('range').hidden = false;
-          if (!$('from').value) { $('from').value = FY.from; $('to').value = FY.to; }
-          return;
-        }
-        $('range').hidden = true;
+      if (k === 'range') {
+        $('range').hidden = false;
+        if (!$('from').value) { $('from').value = FY.from; $('to').value = FY.to; }
+        return;
+      }
+      $('range').hidden = true;
 
-        if (k === 'fy') PERIOD = { from: FY.from, to: FY.to, label: FY.label };
-        else {
-          var m = FY.months[Number(k.slice(1))];
-          PERIOD = { from: m.from, to: m.to, label: m.label + ' ' + m.year };
-        }
-        reload();
-      };
-    });
+      if (k === 'fy') PERIOD = { from: FY.from, to: FY.to, label: FY.label };
+      else {
+        var m = FY.months[Number(k.slice(1))];
+        PERIOD = { from: m.from, to: m.to, label: m.label + ' ' + m.year };
+      }
+      reload();
+    };
 
     $('apply').onclick = function () {
       if (!$('from').value || !$('to').value) return;
@@ -609,6 +645,7 @@
       '<button class="primary" id="place">Place order</button>' +
       '<button class="more" id="batch">Orders waiting to send</button>' +
       '<button class="more" id="newparty">Open a party with a balance</button>' +
+      '<button class="more" id="newcat">Add an expense category</button>' +
       '<p class="note" style="margin-top:10px">Saving writes the entry into Jolly, ' +
       'not yet delivered. It reaches the ledger when you confirm delivery there.</p>';
 
@@ -776,6 +813,7 @@
     $('place').onclick = placeOrder;
     if ($('batch')) $('batch').onclick = function () { showBatch(); };
     if ($('newparty')) $('newparty').onclick = showNewParty;
+    if ($('newcat')) $('newcat').onclick = showNewCategory;
   }
 
   /**
@@ -834,6 +872,59 @@
         .catch(function (e) {
           $('psave').disabled = false;
           $('psave').textContent = 'Open the party';
+          alert(e.message);
+        });
+    };
+  }
+
+  /**
+   * Opens a new expense head from the app.
+   *
+   * A category is a ledger like any other here, so this is the same act as
+   * opening a party — it just always starts at nil, because an expense head
+   * does not carry a balance forward from anywhere.
+   */
+  function showNewCategory() {
+    mark('showNewCategory');
+    VIEW = 'orders';
+    setTab('tabOrders');
+    $('search').hidden = true; $('back').hidden = true;
+    $('periods').hidden = true; $('range').hidden = true;
+    $('title').textContent = 'New expense head';
+
+    $('main').innerHTML =
+      '<div class="field"><label>Category name</label>' +
+        '<input id="cname" autocomplete="off" placeholder="Rent, Electricity, Diesel…"></div>' +
+      '<button class="primary" id="csave">Add the category</button>' +
+      '<button class="more" id="cback">Back to the order</button>' +
+      '<p class="note" style="margin-top:10px">It appears in the Category ' +
+      'dropdown on the Expense tab straight away, and gets its own ledger.</p>' +
+      '<div id="clist" class="note" style="margin-top:14px"></div>';
+
+    // What already exists, so nobody adds a second spelling of a head that is
+    // already there — the commonest way an expense total quietly splits in two.
+    api('lists', { token: TOKEN }).then(function (r) {
+      var cats = (r.data && r.data.categories) || [];
+      if (!cats.length) return;
+      $('clist').innerHTML = 'Already in use:<br>' + cats.map(esc).join(' · ');
+    }).catch(function () {});
+
+    $('cback').onclick = showOrders;
+    $('csave').onclick = function () {
+      var name = ($('cname').value || '').trim();
+      if (!name) { alert('Give the category a name.'); return; }
+
+      $('csave').disabled = true;
+      $('csave').textContent = 'Adding…';
+
+      api('categoryNew', { token: TOKEN, name: name })
+        .then(function (r) {
+          showOrders();
+          alert(r.data.message);
+        })
+        .catch(function (e) {
+          $('csave').disabled = false;
+          $('csave').textContent = 'Add the category';
           alert(e.message);
         });
     };
@@ -1008,6 +1099,7 @@
   function start() {
     $('signin').hidden = true; $('app').hidden = false;
     $('main').innerHTML = '<div class="empty">Loading…</div>';
+    stillHere();
     api('periods', { token: TOKEN })
       .then(function (r) {
         buildPeriods(r.data);
