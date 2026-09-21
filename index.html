@@ -180,7 +180,6 @@
 <body>
 
 <div id="signin" class="signin">
-  <h2 id="signinTitle">Ledgers</h2>
   <p class="note" id="signinNote">Sign in to continue.</p>
   <input id="u" type="text" placeholder="Username" autocapitalize="none" autocomplete="username">
   <input id="p" type="password" placeholder="Password" autocomplete="current-password">
@@ -195,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 20</span>
+      <span class="note" id="build" style="cursor:pointer">build 21</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -306,7 +305,14 @@
     'Shown, not counted': '\u0aac\u0aa4\u0abe\u0ab5\u0ac7\u0ab2\u0ac1\u0a82, \u0a97\u0aa3\u0aa4\u0ab0\u0ac0\u0aae\u0abe\u0a82 \u0aa8\u0aa5\u0ac0',
     'Stock bought in this period': '\u0a86 \u0a97\u0abe\u0ab3\u0abe\u0aae\u0abe\u0a82 \u0a96\u0ab0\u0ac0\u0aa6\u0ac7\u0ab2\u0acb \u0aae\u0abe\u0ab2',
     'Bills recorded, not yet paid': '\u0aa8\u0acb\u0a82\u0aa7\u0abe\u0aaf\u0ac7\u0ab2\u0abe\u0a82 \u0aac\u0abf\u0ab2, \u0a9a\u0ac2\u0a95\u0ab5\u0ab5\u0abe\u0aa8\u0abe\u0a82 \u0aac\u0abe\u0a95\u0ac0',
-    'Spent on assets': '\u0aae\u0abf\u0ab2\u0a95\u0aa4\u0aae\u0abe\u0a82 \u0ab5\u0aaa\u0ab0\u0abe\u0aaf\u0ac7\u0ab2\u0ac1\u0a82'
+    'Spent on assets': '\u0aae\u0abf\u0ab2\u0a95\u0aa4\u0aae\u0abe\u0a82 \u0ab5\u0aaa\u0ab0\u0abe\u0aaf\u0ac7\u0ab2\u0ac1\u0a82',
+
+    // What the script itself says, translated where it is shown.
+    'Your session has ended. Please sign in again.': '\u0ab8\u0aa4\u0acd\u0ab0 \u0aaa\u0ac2\u0ab0\u0ac1\u0a82 \u0aa5\u0aaf\u0ac1\u0a82. \u0aab\u0ab0\u0ac0 \u0ab8\u0abe\u0a87\u0aa8 \u0a87\u0aa8 \u0a95\u0ab0\u0acb.',
+    'Wrong username or password.': '\u0ab5\u0aaa\u0ab0\u0abe\u0ab6\u0a95\u0ab0\u0acd\u0aa4\u0abe \u0aa8\u0abe\u0aae \u0a95\u0ac7 \u0aaa\u0abe\u0ab8\u0ab5\u0ab0\u0acd\u0aa1 \u0a96\u0acb\u0a9f\u0acb \u0a9b\u0ac7.',
+    'Profit & Loss is not part of this login.': '\u0a86 \u0ab2\u0acb\u0a97\u0abf\u0aa8\u0aae\u0abe\u0a82 \u0aa8\u0aab\u0acb-\u0aa8\u0ac1\u0a95\u0ab8\u0abe\u0aa8 \u0a9c\u0acb\u0ab5\u0abe \u0aae\u0ab3\u0aa4\u0ac1\u0a82 \u0aa8\u0aa5\u0ac0.',
+    'Amount must be more than zero.': '\u0ab0\u0a95\u0aae \u0ab6\u0ac2\u0aa8\u0acd\u0aaf\u0aa5\u0ac0 \u0ab5\u0aa7\u0ac1 \u0ab9\u0acb\u0ab5\u0ac0 \u0a9c\u0acb\u0a88\u0a8f.',
+    'The request could not be read.': '\u0ab5\u0abf\u0aa8\u0a82\u0aa4\u0ac0 \u0ab5\u0abe\u0a82\u0a9a\u0ac0 \u0ab6\u0a95\u0abe\u0a88 \u0aa8\u0ab9\u0ac0\u0a82.'
   };
 
   /** Keep this device's idea of the language in step with the server's. */
@@ -335,7 +341,7 @@
    * Run once the language is known; running it again is harmless.
    */
   function localizeStatic() {
-    [['signinTitle', 'Ledgers'], ['signinNote', 'Sign in to continue.'],
+    [['signinNote', 'Sign in to continue.'],
      ['go', 'Sign in'], ['out', 'Sign out'], ['back', '\u2039 All parties'],
      ['tabLedgers', 'Ledgers'], ['tabOrders', 'Orders'],
      ['tabRecent', 'Recent'], ['tabPL', 'P&L'],
@@ -429,7 +435,7 @@
       })
       .catch(function (e) {
         $('go').disabled = false; $('go').textContent = t('Sign in');
-        $('err').textContent = e.message; $('err').hidden = false;
+        $('err').textContent = t(e.message); $('err').hidden = false;
       });
   }
 
@@ -487,11 +493,11 @@
       TOKEN = null;
       try { localStorage.removeItem('ledger_token'); } catch (e2) {}
       $('app').hidden = true; $('signin').hidden = false;
-      $('err').textContent = e.message; $('err').hidden = false;
+      $('err').textContent = t(e.message); $('err').hidden = false;
       return;
     }
     $('main').innerHTML = '<div class="empty">' + t('Could not load.') + '<br>' +
-      '<span class="note">' + esc(e.message) + '</span></div>';
+      '<span class="note">' + esc(t(e.message)) + '</span></div>';
   }
 
   // --- the period on screen -------------------------------------------------
