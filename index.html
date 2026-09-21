@@ -194,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 21</span>
+      <span class="note" id="build" style="cursor:pointer">build 22</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -748,7 +748,9 @@
   function recentRow(row) {
     // Particulars is the working the sync wrote, which is what makes a bank
     // line readable without opening the sheet.
-    var sub = [row.date, row.ref, row.via, row.postedAt].filter(Boolean).map(esc).join(' · ');
+    // The posting time is deliberately left out: the day is the report's own
+    // heading, and the minute it was keyed in answers nothing anybody asks.
+    var sub = [row.date, row.ref, row.via].filter(Boolean).map(esc).join(' · ');
     return '<div class="l">' +
       '<span><span class="name">' + esc(row.party || '—') + '</span>' +
         '<div class="sub">' + sub +
