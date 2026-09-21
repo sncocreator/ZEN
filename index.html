@@ -180,8 +180,8 @@
 <body>
 
 <div id="signin" class="signin">
-  <h2>Ledgers</h2>
-  <p class="note">Sign in to continue.</p>
+  <h2 id="signinTitle">Ledgers</h2>
+  <p class="note" id="signinNote">Sign in to continue.</p>
   <input id="u" type="text" placeholder="Username" autocapitalize="none" autocomplete="username">
   <input id="p" type="password" placeholder="Password" autocomplete="current-password">
   <button id="go">Sign in</button>
@@ -195,7 +195,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 18</span>
+      <span class="note" id="build" style="cursor:pointer">build 19</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -208,7 +208,7 @@
     <input type="search" id="search" placeholder="Search a party" autocomplete="off">
     <div class="chips" id="periods"></div>
     <div class="range" id="range" hidden>
-      <input type="date" id="from"><span class="note">to</span><input type="date" id="to">
+      <input type="date" id="from"><span class="note" id="rangeTo">to</span><input type="date" id="to">
       <button class="link" id="apply">Apply</button>
     </div>
   </header>
@@ -220,6 +220,135 @@
   var API = 'https://script.google.com/macros/s/AKfycbyUlbk-ydY9eOCW6kLPI7zeDj-3VjQaqaR83xf1AN50dR9jfKgbRD0RLz4VCTd3aTXV/exec';
 
   var TOKEN = null, parties = [], current = null, VIEW = 'ledgers', FY = null;
+  // --- the app's own words ----------------------------------------------------
+
+  /**
+   * Gujarati for one login. The language is set per account in the sheet and
+   * comes back at sign in and on every reload.
+   *
+   * Keyed on the ENGLISH text rather than on invented ids, so a string with no
+   * translation stays English instead of showing a missing key, and what you
+   * read in a template is what appears on screen.
+   *
+   * NOTHING typed into the sheets passes through here. Party names, items,
+   * heads and narrations are printed exactly as entered. Dr and Cr stay English
+   * by the owner's decision: they read as symbols, and the words do not fit the
+   * column.
+   */
+  var LANG = 'en';
+  var GU = {
+    'Ledgers': '\u0a96\u0abe\u0aa4\u0abe\u0a82',
+    'Sign in to continue.': '\u0a9a\u0abe\u0ab2\u0ac1 \u0ab0\u0abe\u0a96\u0ab5\u0abe \u0ab8\u0abe\u0a87\u0aa8 \u0a87\u0aa8 \u0a95\u0ab0\u0acb.',
+    'Username': '\u0ab5\u0aaa\u0ab0\u0abe\u0ab6\u0a95\u0ab0\u0acd\u0aa4\u0abe \u0aa8\u0abe\u0aae',
+    'Password': '\u0aaa\u0abe\u0ab8\u0ab5\u0ab0\u0acd\u0aa1',
+    'Sign in': '\u0ab8\u0abe\u0a87\u0aa8 \u0a87\u0aa8',
+    'Signing in\u2026': '\u0ab8\u0abe\u0a87\u0aa8 \u0a87\u0aa8 \u0aa5\u0abe\u0aaf \u0a9b\u0ac7\u2026',
+    'Sign out': '\u0ab8\u0abe\u0a87\u0aa8 \u0a86\u0a89\u0a9f',
+    '\u2039 All parties': '\u2039 \u0aac\u0aa7\u0ac0 \u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0',
+    'Orders': '\u0a93\u0ab0\u0acd\u0aa1\u0ab0',
+    'Recent': '\u0aa4\u0abe\u0a9c\u0ac7\u0aa4\u0ab0\u0aa8\u0ac1\u0a82',
+    'P&L': '\u0aa8\u0aab\u0acb-\u0aa8\u0ac1\u0a95\u0ab8\u0abe\u0aa8',
+    'Search a party': '\u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0 \u0ab6\u0acb\u0aa7\u0acb',
+    'Dates\u2026': '\u0aa4\u0abe\u0ab0\u0ac0\u0a96\u2026',
+    'Apply': '\u0ab2\u0abe\u0a97\u0ac1 \u0a95\u0ab0\u0acb',
+    'to': '\u0aa5\u0ac0',
+    'Loading\u2026': '\u0ab2\u0acb\u0aa1 \u0aa5\u0abe\u0aaf \u0a9b\u0ac7\u2026',
+    'Could not load.': '\u0ab2\u0acb\u0aa1 \u0aa5\u0a88 \u0ab6\u0a95\u0acd\u0aaf\u0ac1\u0a82 \u0aa8\u0ab9\u0ac0\u0a82.',
+    'No party matches that.': '\u0a8f\u0ab5\u0ac0 \u0a95\u0acb\u0a88 \u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0 \u0aae\u0ab3\u0ac0 \u0aa8\u0ab9\u0ac0\u0a82.',
+    'No entries yet.': '\u0ab9\u0a9c\u0ac0 \u0a95\u0acb\u0a88 \u0aa8\u0acb\u0a82\u0aa7 \u0aa8\u0aa5\u0ac0.',
+    'entries': '\u0aa8\u0acb\u0a82\u0aa7',
+    'entry': '\u0aa8\u0acb\u0a82\u0aa7',
+    'last': '\u0a9b\u0ac7\u0ab2\u0acd\u0ab2\u0ac7',
+    'Balance': '\u0aac\u0abe\u0a95\u0ac0',
+    'Opening balance': '\u0ab6\u0ab0\u0ac2\u0a86\u0aa4\u0aa8\u0ac0 \u0aac\u0abe\u0a95\u0ac0',
+    'Balance b/f': '\u0a86\u0a97\u0ab3 \u0ab2\u0abe\u0ab5\u0ac7\u0ab2 \u0aac\u0abe\u0a95\u0ac0',
+    'Brought forward': '\u0a86\u0a97\u0ab3 \u0ab2\u0abe\u0ab5\u0ac7\u0ab2',
+    'earlier': '\u0a85\u0a97\u0abe\u0a89\u0aa8\u0ac0',
+    'Date': '\u0aa4\u0abe\u0ab0\u0ac0\u0a96',
+    'Particulars': '\u0ab5\u0abf\u0a97\u0aa4',
+    'Debit': '\u0a89\u0aa7\u0abe\u0ab0',
+    'Credit': '\u0a9c\u0aae\u0abe',
+    'Show all': '\u0aac\u0aa7\u0ac1\u0a82 \u0aac\u0aa4\u0abe\u0ab5\u0acb',
+    'New order': '\u0aa8\u0ab5\u0acb \u0a93\u0ab0\u0acd\u0aa1\u0ab0',
+    'New party': '\u0aa8\u0ab5\u0ac0 \u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0',
+    'New category': '\u0aa8\u0ab5\u0ac1\u0a82 \u0a96\u0ab0\u0acd\u0a9a \u0a96\u0abe\u0aa4\u0ac1\u0a82',
+    'Add the category': '\u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0a89\u0aae\u0ac7\u0ab0\u0acb',
+    'Place order': '\u0a93\u0ab0\u0acd\u0aa1\u0ab0 \u0aae\u0ac2\u0a95\u0acb',
+    'Send': '\u0aae\u0acb\u0a95\u0ab2\u0acb',
+    'Item': '\u0aae\u0abe\u0ab2',
+    'Pack': '\u0aaa\u0ac7\u0a95',
+    'Qty': '\u0a9c\u0aa5\u0acd\u0aa5\u0acb',
+    'Packs': '\u0aaa\u0ac7\u0a95 \u0ab8\u0a82\u0a96\u0acd\u0aaf\u0abe',
+    'Rate': '\u0aad\u0abe\u0ab5',
+    'with GST': '\u0a9c\u0ac0\u0a8f\u0ab8\u0a9f\u0ac0 \u0ab8\u0abe\u0aa5\u0ac7',
+    'without GST': '\u0a9c\u0ac0\u0a8f\u0ab8\u0a9f\u0ac0 \u0ab5\u0a97\u0ab0',
+    'Total': '\u0a95\u0ac1\u0ab2',
+    'Anything the plant should know': '\u0aaa\u0acd\u0ab2\u0abe\u0aa8\u0acd\u0a9f\u0aa8\u0ac7 \u0a9c\u0aa3\u0abe\u0ab5\u0ab5\u0abe\u0aa8\u0ac1\u0a82 \u0ab9\u0acb\u0aaf \u0aa4\u0ac7',
+    'As it should read on the ledger': '\u0a96\u0abe\u0aa4\u0abe\u0aae\u0abe\u0a82 \u0a9c\u0ac7\u0aae \u0ab2\u0a96\u0abe\u0ab5\u0ac1\u0a82 \u0a9c\u0acb\u0a88\u0a8f \u0aa4\u0ac7\u0aae',
+    'Pick one, or type a new name': '\u0a8f\u0a95 \u0aaa\u0ab8\u0a82\u0aa6 \u0a95\u0ab0\u0acb, \u0a85\u0aa5\u0ab5\u0abe \u0aa8\u0ab5\u0ac1\u0a82 \u0aa8\u0abe\u0aae \u0ab2\u0a96\u0acb',
+    'Sale': '\u0ab5\u0ac7\u0a9a\u0abe\u0aa3',
+    'Purchase': '\u0a96\u0ab0\u0ac0\u0aa6\u0ac0',
+    'Expense': '\u0a96\u0ab0\u0acd\u0a9a',
+    'Payment': '\u0a9a\u0ac1\u0a95\u0ab5\u0aa3\u0ac0',
+    'Receipt': '\u0a89\u0a98\u0ab0\u0abe\u0aa3\u0ac0',
+    'By day': '\u0aa6\u0abf\u0ab5\u0ab8 \u0aaa\u0acd\u0ab0\u0aae\u0abe\u0aa3\u0ac7',
+    'By kind': '\u0aaa\u0acd\u0ab0\u0a95\u0abe\u0ab0 \u0aaa\u0acd\u0ab0\u0aae\u0abe\u0aa3\u0ac7',
+    'Posted since': '\u0aa5\u0ac0 \u0aa8\u0acb\u0a82\u0aa7\u0abe\u0aaf\u0ac7\u0ab2\u0ac1\u0a82',
+    'Nothing posted since': '\u0aa5\u0ac0 \u0a95\u0ab6\u0ac1\u0a82 \u0aa8\u0acb\u0a82\u0aa7\u0abe\u0aaf\u0ac1\u0a82 \u0aa8\u0aa5\u0ac0',
+    'Profit & Loss': '\u0aa8\u0aab\u0acb-\u0aa8\u0ac1\u0a95\u0ab8\u0abe\u0aa8',
+    'Income': '\u0a86\u0ab5\u0a95',
+    'Sales': '\u0ab5\u0ac7\u0a9a\u0abe\u0aa3',
+    'Cost of goods sold': '\u0ab5\u0ac7\u0a9a\u0abe\u0aaf\u0ac7\u0ab2\u0abe \u0aae\u0abe\u0ab2\u0aa8\u0ac0 \u0aaa\u0aa1\u0aa4\u0ab0',
+    'Gross profit': '\u0a95\u0ac1\u0ab2 \u0aa8\u0aab\u0acb',
+    'Expenses': '\u0a96\u0ab0\u0acd\u0a9a',
+    'Total expenses': '\u0a95\u0ac1\u0ab2 \u0a96\u0ab0\u0acd\u0a9a',
+    'Net': '\u0a9a\u0acb\u0a96\u0acd\u0a96\u0acb \u0aa8\u0aab\u0acb',
+    'Shown, not counted': '\u0aac\u0aa4\u0abe\u0ab5\u0ac7\u0ab2\u0ac1\u0a82, \u0a97\u0aa3\u0aa4\u0ab0\u0ac0\u0aae\u0abe\u0a82 \u0aa8\u0aa5\u0ac0',
+    'Stock bought in this period': '\u0a86 \u0a97\u0abe\u0ab3\u0abe\u0aae\u0abe\u0a82 \u0a96\u0ab0\u0ac0\u0aa6\u0ac7\u0ab2\u0acb \u0aae\u0abe\u0ab2',
+    'Bills recorded, not yet paid': '\u0aa8\u0acb\u0a82\u0aa7\u0abe\u0aaf\u0ac7\u0ab2\u0abe\u0a82 \u0aac\u0abf\u0ab2, \u0a9a\u0ac2\u0a95\u0ab5\u0ab5\u0abe\u0aa8\u0abe\u0a82 \u0aac\u0abe\u0a95\u0ac0',
+    'Spent on assets': '\u0aae\u0abf\u0ab2\u0a95\u0aa4\u0aae\u0abe\u0a82 \u0ab5\u0aaa\u0ab0\u0abe\u0aaf\u0ac7\u0ab2\u0ac1\u0a82'
+  };
+
+  /** English in, the login's language out. An unknown string stays as it is. */
+  function t(s) {
+    return (LANG === 'gu' && GU[s]) ? GU[s] : s;
+  }
+
+  /**
+   * "Posted since 18 Sep" in English is "18 Sep થી નોંધાયેલું" in Gujarati —
+   * the date leads and the phrase follows. Word order is not something a
+   * lookup table can carry, so the two orders are written out here rather than
+   * left to a concatenation that is only right in one language.
+   */
+  function sinceLine(english, from) {
+    return LANG === 'gu' ? esc(from) + ' ' + t(english)
+                         : t(english) + ' ' + esc(from);
+  }
+
+  /**
+   * The words written straight into the page, which no render function touches.
+   * Run once the language is known; running it again is harmless.
+   */
+  function localizeStatic() {
+    [['signinTitle', 'Ledgers'], ['signinNote', 'Sign in to continue.'],
+     ['go', 'Sign in'], ['out', 'Sign out'], ['back', '\u2039 All parties'],
+     ['tabLedgers', 'Ledgers'], ['tabOrders', 'Orders'],
+     ['tabRecent', 'Recent'], ['tabPL', 'P&L'],
+     ['rangeTo', 'to'], ['apply', 'Apply']
+    ].forEach(function (pair) {
+      var el = $(pair[0]);
+      if (el) el.textContent = t(pair[1]);
+    });
+    [['u', 'Username'], ['p', 'Password'], ['search', 'Search a party']]
+      .forEach(function (pair) {
+        var el = $(pair[0]);
+        if (el) el.placeholder = t(pair[1]);
+      });
+    if ($('title') && VIEW === 'ledgers' && !current) {
+      $('title').textContent = t('Ledgers');
+    }
+  }
+
   var lastLedger = null;   // what the ledger screen is showing, so Share sends that and not something else
   var PERIOD = { from: '', to: '', label: '' };
   var $ = function (id) { return document.getElementById(id); };
@@ -263,18 +392,20 @@
   // --- sign in --------------------------------------------------------------
 
   function signIn() {
-    $('go').disabled = true; $('go').textContent = 'Signing in…'; $('err').hidden = true;
+    $('go').disabled = true; $('go').textContent = t('Signing in…'); $('err').hidden = true;
 
     api('login', { username: $('u').value, password: $('p').value })
       .then(function (r) {
         TOKEN = r.token;
+        LANG = r.lang === 'gu' ? 'gu' : 'en';
+        localizeStatic();
         try { localStorage.setItem('ledger_token', TOKEN); } catch (e) {}
         $('p').value = '';
-        $('go').disabled = false; $('go').textContent = 'Sign in';
+        $('go').disabled = false; $('go').textContent = t('Sign in');
         start();
       })
       .catch(function (e) {
-        $('go').disabled = false; $('go').textContent = 'Sign in';
+        $('go').disabled = false; $('go').textContent = t('Sign in');
         $('err').textContent = e.message; $('err').hidden = false;
       });
   }
@@ -336,7 +467,7 @@
       $('err').textContent = e.message; $('err').hidden = false;
       return;
     }
-    $('main').innerHTML = '<div class="empty">Could not load.<br>' +
+    $('main').innerHTML = '<div class="empty">' + t('Could not load.') + '<br>' +
       '<span class="note">' + esc(e.message) + '</span></div>';
   }
 
@@ -353,6 +484,11 @@
   var CAN_PL = true;
 
   function showRights(fy) {
+    // The language travels with the rights because both answer the same
+    // question — what this login sees — and both must survive a reload,
+    // where there is no sign-in to answer.
+    LANG = fy.lang === 'gu' ? 'gu' : 'en';
+    localizeStatic();
     CAN_PL = fy.pnl !== false;
     $('tabPL').hidden = !CAN_PL;
     if (!CAN_PL && VIEW === 'pl') backToList();
@@ -402,7 +538,7 @@
   function reload() {
     if (VIEW === 'pl') { showProfitLoss(); return; }
     if (current) { openLedger(current); return; }
-    $('main').innerHTML = '<div class="empty">Loading…</div>';
+    $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
     var ticket = takeTicket();
     api('parties', { token: TOKEN, from: PERIOD.from, to: PERIOD.to })
       .then(function (r) {
@@ -422,8 +558,8 @@
     setTab('tabPL');
     $('search').hidden = true; $('back').hidden = true;
     $('periods').hidden = false;
-    $('title').textContent = 'Profit & Loss';
-    $('main').innerHTML = '<div class="empty">Loading…</div>';
+    $('title').textContent = t('Profit & Loss');
+    $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
 
     var ticket = takeTicket();
     api('pnl', { token: TOKEN, from: PERIOD.from, to: PERIOD.to }).then(function (r) {
@@ -434,23 +570,23 @@
       // through. And a purchase is not a cost — it turns money into stock. The
       // cost is what went OUT of the godown, at what it cost to be there.
       var html = '<div class="pl">' +
-        '<div class="l head"><span>Income</span><span></span></div>' +
-        line('Sales', d.sales) +
+        '<div class="l head"><span>' + t('Income') + '</span><span></span></div>' +
+        line(t('Sales'), d.sales) +
         '<div class="l sub"><span class="note">' +
           (d.soldQty ? money(d.soldQty) + ' units, no GST' : 'no GST') +
         '</span><span></span></div>' +
-        line('Cost of goods sold', d.costOfSales) +
-        line('Gross profit', d.gross, 'tot') + '</div>';
+        line(t('Cost of goods sold'), d.costOfSales) +
+        line(t('Gross profit'), d.gross, 'tot') + '</div>';
 
       html += '<div class="pl">' +
-        '<div class="l head"><span>Expenses</span><span></span></div>';
+        '<div class="l head"><span>' + t('Expenses') + '</span><span></span></div>';
 
       d.expenses.forEach(function (e) { html += line(e.name, e.amount, 'sub'); });
       if (!d.expenses.length) {
         html += '<div class="l sub"><span class="note">No expenses in this period</span><span></span></div>';
       }
 
-      html += line('Total expenses', d.expenseTotal, 'tot');
+      html += line(t('Total expenses'), d.expenseTotal, 'tot');
       html += line(d.tLossRate ? 'T Loss (' + Math.round(d.tLossRate * 100) + '% of sales)' : 'T Loss',
                    d.tLoss) + '</div>';
 
@@ -460,13 +596,13 @@
       if (d.billsRecorded || d.purchases) {
         html += '<div class="pl">';
         if (d.purchases) {
-          html += '<div class="l"><span class="note">Stock bought in this period</span>' +
+          html += '<div class="l"><span class="note">' + t('Stock bought in this period') + '</span>' +
             '<span class="note v">' + money(d.purchases) + '</span></div>' +
             '<div class="l"><span class="note">Counted when the goods are sold</span>' +
             '<span></span></div>';
         }
         if (d.billsRecorded) {
-          html += '<div class="l"><span class="note">Bills recorded, not yet paid</span>' +
+          html += '<div class="l"><span class="note">' + t('Bills recorded, not yet paid') + '</span>' +
             '<span class="note v">' + money(d.billsRecorded) + '</span></div>' +
             '<div class="l"><span class="note">Counted when the money leaves</span>' +
             '<span></span></div>';
@@ -475,7 +611,7 @@
       }
 
       html += '<div class="pl"><div class="l">' +
-        '<span class="net">Net</span>' +
+        '<span class="net">' + t('Net') + '</span>' +
         '<span class="net v ' + (d.net >= 0 ? 'cr' : 'loss') + '">' +
         (d.net < 0 ? '(' + money(d.net) + ')' : money(d.net)) + '</span></div>' +
         '<div class="l"><span class="note">' + esc(PERIOD.label) + '</span>' +
@@ -497,7 +633,7 @@
     setTab('tabLedgers');
     $('search').hidden = false; $('back').hidden = true;
     $('periods').hidden = false;
-    $('title').textContent = 'Ledgers';
+    $('title').textContent = t('Ledgers');
     reload();
   }
 
@@ -568,8 +704,8 @@
     setTab('tabRecent');
     $('search').hidden = true; $('back').hidden = true;
     $('periods').hidden = true; $('range').hidden = true;
-    $('title').textContent = 'Recent';
-    $('main').innerHTML = '<div class="empty">Loading…</div>';
+    $('title').textContent = t('Recent');
+    $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
 
     var ticket = takeTicket();
     api('recent', { token: TOKEN, days: 3 }).then(function (r) {
@@ -596,7 +732,7 @@
    * a part of it rather than the two competing.
    */
   function recentGroup(g, nested) {
-    return '<div class="l head' + (nested ? ' sub' : '') + '"><span>' + esc(g.kind) + '</span>' +
+    return '<div class="l head' + (nested ? ' sub' : '') + '"><span>' + esc(t(g.kind)) + '</span>' +
       '<span class="v">' + g.count + ' · ' + money(g.total) + '</span></div>' +
       g.rows.map(recentRow).join('');
   }
@@ -607,17 +743,16 @@
     var days = d.byDay || [];
 
     if (!d.groups.length) {
-      $('main').innerHTML = '<div class="empty">Nothing posted since ' +
-        esc(d.from) + '.</div>';
+      $('main').innerHTML = '<div class="empty">' + sinceLine('Nothing posted since', d.from) + '.</div>';
       return;
     }
 
     var head =
       '<div class="bar" style="margin-bottom:10px">' +
-        '<span class="note">Posted since ' + esc(d.from) + '</span>' +
+        '<span class="note">' + sinceLine('Posted since', d.from) + '</span>' +
         (days.length
           ? '<button class="link" id="recentBy">' +
-              (RECENT_BY === 'day' ? 'By kind' : 'By day') + '</button>'
+              t(RECENT_BY === 'day' ? 'By kind' : 'By day') + '</button>'
           : '') +
       '</div>';
 
@@ -661,7 +796,7 @@
     $('search').hidden = true; $('back').hidden = true;
     $('periods').hidden = true; $('range').hidden = true;
     $('title').textContent = 'New order';
-    $('main').innerHTML = '<div class="empty">Loading…</div>';
+    $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
 
     var ticket = takeTicket();
     if (lists) { drawOrderForm(); return; }
@@ -1086,7 +1221,7 @@
     $('search').hidden = true; $('back').hidden = true;
     $('periods').hidden = true; $('range').hidden = true;
     $('title').textContent = 'Orders to send';
-    $('main').innerHTML = '<div class="empty">Loading…</div>';
+    $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
 
     var ticket = takeTicket();
     api('ordersPending', { token: TOKEN }).then(function (r) {
@@ -1197,7 +1332,7 @@
 
   function start() {
     $('signin').hidden = true; $('app').hidden = false;
-    $('main').innerHTML = '<div class="empty">Loading…</div>';
+    $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
     stillHere();
     api('periods', { token: TOKEN })
       .then(function (r) {
@@ -1220,12 +1355,12 @@
     var shown = parties.filter(function (p) { return p.name.toLowerCase().indexOf(q) !== -1; });
 
     $('main').innerHTML = shown.length === 0
-      ? '<div class="empty">' + (parties.length ? 'No party matches that.' : 'No entries yet.') + '</div>'
+      ? '<div class="empty">' + (parties.length ? t('No party matches that.') : t('No entries yet.')) + '</div>'
       : shown.map(function (p, i) {
           return '<div class="row" data-i="' + i + '">' +
                    '<div><div class="name">' + esc(p.name) + '</div>' +
-                   '<div class="sub">' + p.count + ' entries' +
-                     (p.last ? ' · last ' + esc(p.last) : '') + '</div></div>' +
+                   '<div class="sub">' + p.count + ' ' + t('entries') +
+                     (p.last ? ' · ' + t('last') + ' ' + esc(p.last) : '') + '</div></div>' +
                    '<div class="amt ' + cls(p.balance) + '">' + money(p.balance) +
                    ' <span class="tag">' + side(p.balance) + '</span></div>' +
                  '</div>';
@@ -1245,7 +1380,7 @@
     // the screen said another — which is indistinguishable from the app having
     // ignored the tap.
     setTab('tabLedgers');
-    $('main').innerHTML = '<div class="empty">Loading…</div>';
+    $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
     $('search').hidden = true; $('back').hidden = false;
     $('periods').hidden = false;
     $('title').textContent = name;
@@ -1260,18 +1395,19 @@
       lastLedger = d;
       var first = d.hidden
         ? '<tr><td class="note">—</td>' +
-          '<td class="note">Brought forward · ' + d.hidden + ' earlier ' +
-            (d.hidden === 1 ? 'entry' : 'entries') + '</td><td></td><td></td>' +
+          '<td class="note">' + t('Brought forward') + ' · ' + d.hidden +
+            ' ' + t('earlier') + ' ' + t(d.hidden === 1 ? 'entry' : 'entries') +
+            '</td><td></td><td></td>' +
           '<td class="' + cls(d.broughtForward) + '">' + money(d.broughtForward) +
           ' ' + side(d.broughtForward) + '</td></tr>'
         : '<tr><td class="note">—</td><td class="note">' +
-          (d.periodOpening ? 'Balance b/f' : 'Opening balance') +
+          t(d.periodOpening ? 'Balance b/f' : 'Opening balance') +
           '</td><td></td><td></td>' +
           '<td class="' + cls(d.opening) + '">' + money(d.opening) +
           ' ' + side(d.opening) + '</td></tr>';
 
       $('main').innerHTML =
-        '<div class="summary"><div><div class="note">Balance</div>' +
+        '<div class="summary"><div><div class="note">' + t('Balance') + '</div>' +
           '<div class="big ' + cls(d.balance) + '">' + money(d.balance) +
           ' <span class="tag">' + side(d.balance) + '</span></div></div>' +
           '<div style="text-align:right"><div class="note">Debit ' + money(d.totalDebit) + '</div>' +
@@ -1359,7 +1495,7 @@
     mark('backToList');
     current = null;
     $('search').hidden = false; $('back').hidden = true;
-    $('title').textContent = 'Ledgers';
+    $('title').textContent = t('Ledgers');
     showList($('search').value);
   }
 
