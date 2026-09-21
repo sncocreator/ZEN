@@ -195,7 +195,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 19</span>
+      <span class="note" id="build" style="cursor:pointer">build 20</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -309,6 +309,11 @@
     'Spent on assets': '\u0aae\u0abf\u0ab2\u0a95\u0aa4\u0aae\u0abe\u0a82 \u0ab5\u0aaa\u0ab0\u0abe\u0aaf\u0ac7\u0ab2\u0ac1\u0a82'
   };
 
+  /** Keep this device's idea of the language in step with the server's. */
+  function rememberLang() {
+    try { localStorage.setItem('ledger_lang', LANG); } catch (e) {}
+  }
+
   /** English in, the login's language out. An unknown string stays as it is. */
   function t(s) {
     return (LANG === 'gu' && GU[s]) ? GU[s] : s;
@@ -356,6 +361,23 @@
   try { TOKEN = localStorage.getItem('ledger_token'); } catch (e) {}
 
   /**
+   * The language of the LAST person to sign in on this device.
+   *
+   * The account decides the language, and the app does not know the account
+   * until the sign-in is answered — so the sign-in screen itself can only be
+   * English the first time. Remembering it here makes it Gujarati from the
+   * second time on, for somebody who only ever signs in as themselves.
+   *
+   * It is a convenience, not a permission: the server sends the real answer
+   * moments later and it is overwritten. Reading it can throw in a private
+   * window, so it is wrapped like every other storage call here.
+   */
+  try {
+    var remembered = localStorage.getItem('ledger_lang');
+    if (remembered === 'gu' || remembered === 'en') LANG = remembered;
+  } catch (e) {}
+
+  /**
    * Every request to the script goes through here.
    *
    * POST with a text/plain content type on purpose: it counts as a "simple"
@@ -398,6 +420,7 @@
       .then(function (r) {
         TOKEN = r.token;
         LANG = r.lang === 'gu' ? 'gu' : 'en';
+        rememberLang();
         localizeStatic();
         try { localStorage.setItem('ledger_token', TOKEN); } catch (e) {}
         $('p').value = '';
@@ -488,6 +511,7 @@
     // question — what this login sees — and both must survive a reload,
     // where there is no sign-in to answer.
     LANG = fy.lang === 'gu' ? 'gu' : 'en';
+    rememberLang();
     localizeStatic();
     CAN_PL = fy.pnl !== false;
     $('tabPL').hidden = !CAN_PL;
@@ -1511,6 +1535,7 @@
   $('tabPL').onclick = showProfitLoss;
   $('search').oninput = function () { showList(this.value); };
 
+  localizeStatic();
   if (TOKEN) start();
 </script>
 </body>
