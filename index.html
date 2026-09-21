@@ -194,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 22</span>
+      <span class="note" id="build" style="cursor:pointer">build 23</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -306,6 +306,8 @@
     'Stock bought in this period': '\u0a86 \u0a97\u0abe\u0ab3\u0abe\u0aae\u0abe\u0a82 \u0a96\u0ab0\u0ac0\u0aa6\u0ac7\u0ab2\u0acb \u0aae\u0abe\u0ab2',
     'Bills recorded, not yet paid': '\u0aa8\u0acb\u0a82\u0aa7\u0abe\u0aaf\u0ac7\u0ab2\u0abe\u0a82 \u0aac\u0abf\u0ab2, \u0a9a\u0ac2\u0a95\u0ab5\u0ab5\u0abe\u0aa8\u0abe\u0a82 \u0aac\u0abe\u0a95\u0ac0',
     'Spent on assets': '\u0aae\u0abf\u0ab2\u0a95\u0aa4\u0aae\u0abe\u0a82 \u0ab5\u0aaa\u0ab0\u0abe\u0aaf\u0ac7\u0ab2\u0ac1\u0a82',
+
+    'Nothing outstanding. Search for a name to see a settled account.': '\u0a95\u0ab6\u0ac1\u0a82 \u0aac\u0abe\u0a95\u0ac0 \u0aa8\u0aa5\u0ac0. \u0aaa\u0aa4\u0ac0 \u0a97\u0aaf\u0ac7\u0ab2\u0ac1\u0a82 \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0a9c\u0acb\u0ab5\u0abe \u0aa8\u0abe\u0aae \u0ab6\u0acb\u0aa7\u0acb.',
 
     // What the script itself says, translated where it is shown.
     'Your session has ended. Please sign in again.': '\u0ab8\u0aa4\u0acd\u0ab0 \u0aaa\u0ac2\u0ab0\u0ac1\u0a82 \u0aa5\u0aaf\u0ac1\u0a82. \u0aab\u0ab0\u0ac0 \u0ab8\u0abe\u0a87\u0aa8 \u0a87\u0aa8 \u0a95\u0ab0\u0acb.',
@@ -1384,10 +1386,20 @@
     VIEW = 'ledgers';
     setTab('tabLedgers');
     var q = (filter || '').trim().toLowerCase();
-    var shown = parties.filter(function (p) { return p.name.toLowerCase().indexOf(q) !== -1; });
+
+    // Nothing owed, nothing shown — until you go looking for it. A party at nil
+    // is off the list, because every party ever opened has a row in Parties and
+    // the ones that matter were buried among them. But a settled account is not
+    // gone: type any part of the name and it appears, balance and all.
+    var shown = parties.filter(function (p) {
+      if (p.name.toLowerCase().indexOf(q) === -1) return false;
+      return q ? true : p.balance !== 0;
+    });
 
     $('main').innerHTML = shown.length === 0
-      ? '<div class="empty">' + (parties.length ? t('No party matches that.') : t('No entries yet.')) + '</div>'
+      ? '<div class="empty">' + (parties.length ? t('No party matches that.') : t('No entries yet.')) +
+        (!q && parties.length ? '<br><span class="note">' + t('Nothing outstanding. Search for a name to see a settled account.') + '</span>' : '') +
+        '</div>'
       : shown.map(function (p, i) {
           return '<div class="row" data-i="' + i + '">' +
                    '<div><div class="name">' + esc(p.name) + '</div>' +
