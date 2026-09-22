@@ -194,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 29</span>
+      <span class="note" id="build" style="cursor:pointer">build 30</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -824,7 +824,10 @@
     $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
 
     var ticket = takeTicket();
-    api('recent', { token: TOKEN, days: 3 }).then(function (r) {
+    // No number sent on purpose. The server reads "Recent covers (days)" from
+    // the App Settings tab, and a number sent from here would override it —
+    // which is exactly what made changing that setting do nothing.
+    api('recent', { token: TOKEN }).then(function (r) {
       if (!stillWanted(ticket)) return;
       drawRecent(r.data);
     }).catch(fail);
