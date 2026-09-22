@@ -194,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 27</span>
+      <span class="note" id="build" style="cursor:pointer">build 28</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -1456,9 +1456,14 @@
         // Asking for the party list when Ledgers is not this login's would be
         // refused by the server — correctly — and the app would open on an
         // error instead of on the screen they do have.
+        // Sent on EVERY load, English included. The list is what fills the App
+        // Words tab, and gating it on Gujarati meant the tab did not exist
+        // until somebody was already using the language — so the one place to
+        // change the wording could not be found until it was too late to need.
+        //
         // Not waited for: the app is already readable in its own words, and a
         // slow dictionary should not hold up the ledgers.
-        if (LANG === 'gu') loadWords();
+        loadWords();
 
         if (TABS.ledgers === false) { firstAllowedScreen(); return null; }
         return api('parties', { token: TOKEN, from: PERIOD.from, to: PERIOD.to });
