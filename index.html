@@ -194,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 23</span>
+      <span class="note" id="build" style="cursor:pointer">build 24</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -308,6 +308,24 @@
     'Spent on assets': '\u0aae\u0abf\u0ab2\u0a95\u0aa4\u0aae\u0abe\u0a82 \u0ab5\u0aaa\u0ab0\u0abe\u0aaf\u0ac7\u0ab2\u0ac1\u0a82',
 
     'Nothing outstanding. Search for a name to see a settled account.': '\u0a95\u0ab6\u0ac1\u0a82 \u0aac\u0abe\u0a95\u0ac0 \u0aa8\u0aa5\u0ac0. \u0aaa\u0aa4\u0ac0 \u0a97\u0aaf\u0ac7\u0ab2\u0ac1\u0a82 \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0a9c\u0acb\u0ab5\u0abe \u0aa8\u0abe\u0aae \u0ab6\u0acb\u0aa7\u0acb.',
+
+    'Party': '\u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0',
+    'Narration': '\u0ab5\u0abf\u0a97\u0aa4',
+    'opt.': '\u0aae\u0ab0\u0a9c\u0abf\u0aaf\u0abe\u0aa4',
+    'Remove': '\u0a95\u0abe\u0aa2\u0acb',
+    'Number': '\u0ab8\u0a82\u0a96\u0acd\u0aaf\u0abe',
+    'Comes to': '\u0aa5\u0abe\u0aaf \u0a9b\u0ac7',
+    'Add another line': '\u0aac\u0ac0\u0a9c\u0ac0 \u0ab2\u0abe\u0a87\u0aa8 \u0a89\u0aae\u0ac7\u0ab0\u0acb',
+    'Orders waiting to send': '\u0aae\u0acb\u0a95\u0ab2\u0ab5\u0abe\u0aa8\u0abe \u0aac\u0abe\u0a95\u0ac0 \u0a93\u0ab0\u0acd\u0aa1\u0ab0',
+    'Open a party with a balance': '\u0aac\u0abe\u0a95\u0ac0 \u0ab8\u0abe\u0aa5\u0ac7 \u0aa8\u0ab5\u0ac0 \u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0 \u0a96\u0acb\u0ab2\u0acb',
+    'Add an expense category': '\u0a96\u0ab0\u0acd\u0a9a \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0a89\u0aae\u0ac7\u0ab0\u0acb',
+    'A name not on the list opens a new party.': '\u0aaf\u0abe\u0aa6\u0ac0\u0aae\u0abe\u0a82 \u0aa8 \u0ab9\u0acb\u0aaf \u0a8f\u0ab5\u0ac1\u0a82 \u0aa8\u0abe\u0aae \u0aa8\u0ab5\u0ac0 \u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0 \u0a96\u0acb\u0ab2\u0ac7 \u0a9b\u0ac7.',
+    'Line': '\u0ab2\u0abe\u0a87\u0aa8',
+
+    'Saving writes the entry into Jolly, not yet delivered. It reaches the ledger when you confirm delivery there.': '\u0ab8\u0abe\u0a9a\u0ab5\u0ab5\u0abe\u0aa5\u0ac0 \u0aa8\u0acb\u0a82\u0aa7 Jolly \u0aae\u0abe\u0a82 \u0ab2\u0a96\u0abe\u0aaf \u0a9b\u0ac7, \u0aa1\u0abf\u0ab2\u0abf\u0ab5\u0ab0\u0ac0 \u0aac\u0abe\u0a95\u0ac0. \u0aa4\u0acd\u0aaf\u0abe\u0a82 \u0aa1\u0abf\u0ab2\u0abf\u0ab5\u0ab0\u0ac0 \u0a96\u0abe\u0aa4\u0ab0\u0ac0 \u0a95\u0ab0\u0acb \u0aa4\u0acd\u0aaf\u0abe\u0ab0\u0ac7 \u0aa4\u0ac7 \u0a96\u0abe\u0aa4\u0abe\u0aae\u0abe\u0a82 \u0aaa\u0ab9\u0acb\u0a82\u0a9a\u0ac7 \u0a9b\u0ac7.',
+    'If it really is a different shop, say so \u2014 otherwise this entry will be held back.': '\u0a96\u0ab0\u0ac7\u0a96\u0ab0 \u0aac\u0ac0\u0a9c\u0ac0 \u0aa6\u0ac1\u0a95\u0abe\u0aa8 \u0ab9\u0acb\u0aaf \u0aa4\u0acb \u0a95\u0ab9\u0acb \u2014 \u0aa8\u0ab9\u0ac0\u0a82 \u0aa4\u0acb \u0a86 \u0aa8\u0acb\u0a82\u0aa7 \u0ab0\u0acb\u0a95\u0ac0 \u0ab0\u0abe\u0a96\u0ab5\u0abe\u0aae\u0abe\u0a82 \u0a86\u0ab5\u0ab6\u0ac7.',
+    'New party \u2014 it will be opened at nil when this posts. Use the New Parties tab in Jolly if it starts with a balance.': '\u0aa8\u0ab5\u0ac0 \u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0 \u2014 \u0a86 \u0aaa\u0acb\u0ab8\u0acd\u0a9f \u0aa5\u0ab6\u0ac7 \u0aa4\u0acd\u0aaf\u0abe\u0ab0\u0ac7 \u0ab6\u0ac2\u0aa8\u0acd\u0aaf\u0aa5\u0ac0 \u0a96\u0ac2\u0ab2\u0ab6\u0ac7. \u0aac\u0abe\u0a95\u0ac0 \u0ab8\u0abe\u0aa5\u0ac7 \u0ab6\u0ab0\u0ac2 \u0a95\u0ab0\u0ab5\u0ac0 \u0ab9\u0acb\u0aaf \u0aa4\u0acb Jolly \u0aa8\u0abe New Parties \u0aaa\u0abe\u0aa8\u0abe\u0aa8\u0acb \u0a89\u0aaa\u0aaf\u0acb\u0a97 \u0a95\u0ab0\u0acb.',
+    'Nothing waiting to be sent.': '\u0aae\u0acb\u0a95\u0ab2\u0ab5\u0abe\u0aa8\u0ac1\u0a82 \u0a95\u0ab6\u0ac1\u0a82 \u0aac\u0abe\u0a95\u0ac0 \u0aa8\u0aa5\u0ac0.',
 
     // What the script itself says, translated where it is shown.
     'Your session has ended. Please sign in again.': '\u0ab8\u0aa4\u0acd\u0ab0 \u0aaa\u0ac2\u0ab0\u0ac1\u0a82 \u0aa5\u0aaf\u0ac1\u0a82. \u0aab\u0ab0\u0ac0 \u0ab8\u0abe\u0a87\u0aa8 \u0a87\u0aa8 \u0a95\u0ab0\u0acb.',
@@ -829,7 +847,7 @@
     setTab('tabOrders');
     $('search').hidden = true; $('back').hidden = true;
     $('periods').hidden = true; $('range').hidden = true;
-    $('title').textContent = 'New order';
+    $('title').textContent = t('New order');
     $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
 
     var ticket = takeTicket();
@@ -854,52 +872,52 @@
 
     var html =
       (note ? '<div class="msg">' + esc(note) + '</div>' : '') +
-      '<div class="field"><label>Party</label>' +
+      '<div class="field"><label>' + t('Party') + '</label>' +
         '<input id="oparty" list="partyList" autocomplete="off" ' +
-               'placeholder="Pick one, or type a new name" value="' + esc(draftParty) + '">' +
+               'placeholder="' + t('Pick one, or type a new name') + '" value="' + esc(draftParty) + '">' +
         '<p class="note" id="partynote" style="margin:6px 0 0"></p></div>' +
       '<datalist id="partyList">' +
         parties.map(function (p) { return '<option value="' + esc(p.name) + '">'; }).join('') +
       '</datalist>' +
-      '<div class="field"><label>Date</label><input type="date" id="odate" value="' +
+      '<div class="field"><label>' + t('Date') + '</label><input type="date" id="odate" value="' +
         todayISO() + '"></div>' +
       // One note for the order, not one per line. It rides to the Narration
       // column of every entry the order makes, and into the message, so the
       // plant reads the same instruction the ledger keeps.
-      '<div class="field"><label>Narration <span class="note">opt.</span></label>' +
-        '<input id="onote" autocomplete="off" placeholder="Anything the plant should know" ' +
+      '<div class="field"><label>' + t('Narration') + ' <span class="note">' + t('opt.') + '</span></label>' +
+        '<input id="onote" autocomplete="off" placeholder="' + t('Anything the plant should know') + '" ' +
                'value="' + esc(draftNote) + '"></div>';
 
     draft.forEach(function (l, i) {
       html +=
         '<div class="card" data-i="' + i + '">' +
-          '<div class="head"><b>Line ' + (i + 1) + '</b>' +
-            (draft.length > 1 ? '<button class="link drop" data-i="' + i + '">Remove</button>' : '') +
+          '<div class="head"><b>' + t('Line') + ' ' + (i + 1) + '</b>' +
+            (draft.length > 1 ? '<button class="link drop" data-i="' + i + '">' + t('Remove') + '</button>' : '') +
           '</div>' +
-          '<div class="field"><label>Item</label>' +
+          '<div class="field"><label>' + t('Item') + '</label>' +
             '<select class="f" data-k="item" data-i="' + i + '">' +
               '<option value=""></option>' + options(lists.items, l.item) +
             '</select></div>' +
           '<div class="g3">' +
-            '<div class="field"><label>Pack</label>' +
+            '<div class="field"><label>' + t('Pack') + '</label>' +
               '<select class="f" data-k="pack" data-i="' + i + '">' +
                 options(lists.packs, l.pack) +
               '</select></div>' +
-            '<div class="field"><label>Qty</label>' +
+            '<div class="field"><label>' + t('Qty') + '</label>' +
               '<input class="f" data-k="qty" data-i="' + i + '" type="number" ' +
                      'inputmode="decimal" value="' + (l.qty || '') + '"></div>' +
             // Optional: it never touches the price. It is here so a load can be
             // checked in the unit it is actually counted in — you count cans,
             // you bill kilos.
-            '<div class="field"><label>Number <span class="note">opt.</span></label>' +
+            '<div class="field"><label>' + t('Number') + ' <span class="note">' + t('opt.') + '</span></label>' +
               '<input class="f" data-k="packs" data-i="' + i + '" type="number" ' +
                      'inputmode="decimal" value="' + (l.packs || '') + '"></div>' +
           '</div>' +
           '<div class="g2">' +
-            '<div class="field"><label>Rate</label>' +
+            '<div class="field"><label>' + t('Rate') + '</label>' +
               '<input class="f" data-k="rate" data-i="' + i + '" type="number" ' +
                      'inputmode="decimal" value="' + (l.rate || '') + '"></div>' +
-            '<div class="field"><label>Comes to</label>' +
+            '<div class="field"><label>' + t('Comes to') + '</label>' +
               '<input value="' + money(lineTotal(l)) + '" disabled></div>' +
           '</div>' +
           '<label class="tick"><input class="f" data-k="gst" data-i="' + i + '" ' +
@@ -908,14 +926,15 @@
     });
 
     html +=
-      '<button class="more" id="addline">Add another line</button>' +
-      '<div class="total"><span>Total</span><span>' + money(draftTotal()) + '</span></div>' +
-      '<button class="primary" id="place">Place order</button>' +
-      '<button class="more" id="batch">Orders waiting to send</button>' +
-      '<button class="more" id="newparty">Open a party with a balance</button>' +
-      '<button class="more" id="newcat">Add an expense category</button>' +
-      '<p class="note" style="margin-top:10px">Saving writes the entry into Jolly, ' +
-      'not yet delivered. It reaches the ledger when you confirm delivery there.</p>';
+      '<button class="more" id="addline">' + t('Add another line') + '</button>' +
+      '<div class="total"><span>' + t('Total') + '</span><span>' + money(draftTotal()) + '</span></div>' +
+      '<button class="primary" id="place">' + t('Place order') + '</button>' +
+      '<button class="more" id="batch">' + t('Orders waiting to send') + '</button>' +
+      '<button class="more" id="newparty">' + t('Open a party with a balance') + '</button>' +
+      '<button class="more" id="newcat">' + t('Add an expense category') + '</button>' +
+      '<p class="note" style="margin-top:10px">' +
+      t('Saving writes the entry into Jolly, not yet delivered. It reaches the ' +
+        'ledger when you confirm delivery there.') + '</p>';
 
     $('main').innerHTML = html;
     wireOrderForm();
@@ -987,7 +1006,7 @@
     // reason for asking "can I not add a party through the app?".
     if (!typed) {
       note.style.color = '';
-      note.textContent = 'A name not on the list opens a new party.';
+      note.textContent = t('A name not on the list opens a new party.');
       return;
     }
 
@@ -998,7 +1017,7 @@
       // Say where a filled-in rate came from. A figure that appears by itself
       // and says nothing is one nobody checks.
       note.textContent = known.rate
-        ? 'Rate ' + money(known.rate) + (known.gst ? ' with GST' : ' without GST') +
+        ? t('Rate') + ' ' + money(known.rate) + ' ' + t(known.gst ? 'with GST' : 'without GST') +
           ' from this party — change it on the line if today is different.'
         : '';
       return;
@@ -1019,12 +1038,13 @@
     // and only then; both are on the list afterwards and match exactly.
     if (score >= 0.80) {
       note.style.color = 'var(--dr)';
-      note.textContent = 'Looks like “' + best + '”. If it really is a different shop, ' +
-                         'say so — otherwise this entry will be held back.';
+      note.textContent = t('Looks like') + ' “' + best + '”. ' +
+        t('If it really is a different shop, say so — otherwise this entry ' +
+          'will be held back.');
     } else {
       note.style.color = 'var(--cr)';
-      note.textContent = 'New party — it will be opened at nil when this posts. ' +
-                         'Use the New Parties tab in Jolly if it starts with a balance.';
+      note.textContent = t('New party — it will be opened at nil when this posts. ' +
+        'Use the New Parties tab in Jolly if it starts with a balance.');
     }
   }
 
@@ -1268,8 +1288,8 @@
     if (!orders.length) {
       $('main').innerHTML =
         (note ? '<div class="msg">' + esc(note) + '</div>' : '') +
-        '<div class="empty">Nothing waiting to be sent.</div>' +
-        '<button class="primary" id="another">New order</button>';
+        '<div class="empty">' + t('Nothing waiting to be sent.') + '</div>' +
+        '<button class="primary" id="another">' + t('New order') + '</button>';
       $('another').onclick = showOrders;
       return;
     }
@@ -1294,7 +1314,7 @@
     }).join('');
 
     html +=
-      '<div class="total"><span>Total</span><span id="btotal">' + money(total) + '</span></div>' +
+      '<div class="total"><span>' + t('Total') + '</span><span id="btotal">' + money(total) + '</span></div>' +
       '<button class="share" id="sendbatch" style="width:100%;margin-top:12px;padding:12px;' +
         'font-size:15px;border-radius:10px">Send on WhatsApp</button>' +
       '<button class="more" id="another">Add another order</button>' +
