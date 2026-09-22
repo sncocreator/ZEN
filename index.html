@@ -194,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 25</span>
+      <span class="note" id="build" style="cursor:pointer">build 27</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -342,9 +342,37 @@
     try { localStorage.setItem('ledger_lang', LANG); } catch (e) {}
   }
 
+  /**
+   * What the sheet says instead, for the phrases somebody has filled in.
+   *
+   * Checked before the built-in table, so the App Words tab always wins. An
+   * empty cell never reaches here, which is what makes a half-finished tab
+   * safe: the app falls back to its own wording phrase by phrase.
+   */
+  var WORDS = {};
+
+  /**
+   * Tell the sheet every phrase this build can print, and take back the ones
+   * somebody has translated.
+   *
+   * The app is the only thing that knows what it says, so it sends the list
+   * rather than the list being kept twice. Failure is silent on purpose: the
+   * app already has working wording, and a screen should not break because a
+   * dictionary could not be reached.
+   */
+  function loadWords() {
+    return api('words', { token: TOKEN, keys: Object.keys(GU) })
+      .then(function (r) {
+        if (r && r.data && r.data.words) WORDS = r.data.words;
+        localizeStatic();
+      })
+      .catch(function () {});
+  }
+
   /** English in, the login's language out. An unknown string stays as it is. */
   function t(s) {
-    return (LANG === 'gu' && GU[s]) ? GU[s] : s;
+    if (LANG !== 'gu') return s;
+    return WORDS[s] || GU[s] || s;
   }
 
   /**
@@ -483,6 +511,8 @@
    * phone suspends background tabs: a page asleep for an hour would otherwise
    * wake believing no time had passed.
    */
+  // The default. The App Settings tab can change it, and the server sends the
+  // number with the rest of what this login gets — so it is a var, not a const.
   var IDLE_MINUTES = 10;
   var idleSince = Date.now(), idleTimer = null;
 
@@ -549,6 +579,7 @@
     // which is the same rule the sheet uses for a user with no row: a missing
     // answer must not remove screens somebody was using yesterday.
     if (fy.tabs) TABS = fy.tabs;
+    if (fy.idleMinutes > 0) IDLE_MINUTES = fy.idleMinutes;
     CAN_PL = TABS.pnl !== false;
 
     $('tabLedgers').hidden = TABS.ledgers === false;
@@ -1425,6 +1456,10 @@
         // Asking for the party list when Ledgers is not this login's would be
         // refused by the server — correctly — and the app would open on an
         // error instead of on the screen they do have.
+        // Not waited for: the app is already readable in its own words, and a
+        // slow dictionary should not hold up the ledgers.
+        if (LANG === 'gu') loadWords();
+
         if (TABS.ledgers === false) { firstAllowedScreen(); return null; }
         return api('parties', { token: TOKEN, from: PERIOD.from, to: PERIOD.to });
       })
