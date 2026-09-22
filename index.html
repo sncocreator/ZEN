@@ -194,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 28</span>
+      <span class="note" id="build" style="cursor:pointer">build 29</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -361,7 +361,13 @@
    * dictionary could not be reached.
    */
   function loadWords() {
-    return api('words', { token: TOKEN, keys: Object.keys(GU) })
+    // What it can say AND what it currently says, so the tab opens showing the
+    // wording in use rather than a column of blanks to retype.
+    return api('words', {
+      token: TOKEN,
+      keys: Object.keys(GU),
+      pairs: Object.keys(GU).map(function (k) { return [k, GU[k]]; })
+    })
       .then(function (r) {
         if (r && r.data && r.data.words) WORDS = r.data.words;
         localizeStatic();
