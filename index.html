@@ -194,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 24</span>
+      <span class="note" id="build" style="cursor:pointer">build 25</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -326,6 +326,8 @@
     'If it really is a different shop, say so \u2014 otherwise this entry will be held back.': '\u0a96\u0ab0\u0ac7\u0a96\u0ab0 \u0aac\u0ac0\u0a9c\u0ac0 \u0aa6\u0ac1\u0a95\u0abe\u0aa8 \u0ab9\u0acb\u0aaf \u0aa4\u0acb \u0a95\u0ab9\u0acb \u2014 \u0aa8\u0ab9\u0ac0\u0a82 \u0aa4\u0acb \u0a86 \u0aa8\u0acb\u0a82\u0aa7 \u0ab0\u0acb\u0a95\u0ac0 \u0ab0\u0abe\u0a96\u0ab5\u0abe\u0aae\u0abe\u0a82 \u0a86\u0ab5\u0ab6\u0ac7.',
     'New party \u2014 it will be opened at nil when this posts. Use the New Parties tab in Jolly if it starts with a balance.': '\u0aa8\u0ab5\u0ac0 \u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0 \u2014 \u0a86 \u0aaa\u0acb\u0ab8\u0acd\u0a9f \u0aa5\u0ab6\u0ac7 \u0aa4\u0acd\u0aaf\u0abe\u0ab0\u0ac7 \u0ab6\u0ac2\u0aa8\u0acd\u0aaf\u0aa5\u0ac0 \u0a96\u0ac2\u0ab2\u0ab6\u0ac7. \u0aac\u0abe\u0a95\u0ac0 \u0ab8\u0abe\u0aa5\u0ac7 \u0ab6\u0ab0\u0ac2 \u0a95\u0ab0\u0ab5\u0ac0 \u0ab9\u0acb\u0aaf \u0aa4\u0acb Jolly \u0aa8\u0abe New Parties \u0aaa\u0abe\u0aa8\u0abe\u0aa8\u0acb \u0a89\u0aaa\u0aaf\u0acb\u0a97 \u0a95\u0ab0\u0acb.',
     'Nothing waiting to be sent.': '\u0aae\u0acb\u0a95\u0ab2\u0ab5\u0abe\u0aa8\u0ac1\u0a82 \u0a95\u0ab6\u0ac1\u0a82 \u0aac\u0abe\u0a95\u0ac0 \u0aa8\u0aa5\u0ac0.',
+
+    'This login has no screens. Ask for access to be turned on.': '\u0a86 \u0ab2\u0acb\u0a97\u0abf\u0aa8\u0aae\u0abe\u0a82 \u0a95\u0acb\u0a88 \u0ab8\u0acd\u0a95\u0acd\u0ab0\u0ac0\u0aa8 \u0aa8\u0aa5\u0ac0. \u0a8d\u0a95\u0acd\u0ab8\u0ac7\u0ab8 \u0a9a\u0abe\u0ab2\u0ac1 \u0a95\u0ab0\u0abe\u0ab5\u0ab5\u0abe \u0a95\u0ab9\u0acb.',
 
     // What the script itself says, translated where it is shown.
     'Your session has ended. Please sign in again.': '\u0ab8\u0aa4\u0acd\u0ab0 \u0aaa\u0ac2\u0ab0\u0ac1\u0a82 \u0aa5\u0aaf\u0ac1\u0a82. \u0aab\u0ab0\u0ac0 \u0ab8\u0abe\u0a87\u0aa8 \u0a87\u0aa8 \u0a95\u0ab0\u0acb.',
@@ -532,6 +534,9 @@
    */
   var CAN_PL = true;
 
+  /** Which screens this login may open, keyed as the App Access tab keys them. */
+  var TABS = { ledgers: true, orders: true, recent: true, pnl: true };
+
   function showRights(fy) {
     // The language travels with the rights because both answer the same
     // question — what this login sees — and both must survive a reload,
@@ -539,9 +544,32 @@
     LANG = fy.lang === 'gu' ? 'gu' : 'en';
     rememberLang();
     localizeStatic();
-    CAN_PL = fy.pnl !== false;
-    $('tabPL').hidden = !CAN_PL;
-    if (!CAN_PL && VIEW === 'pl') backToList();
+
+    // An older script answers without `tabs`. Everything stays visible then,
+    // which is the same rule the sheet uses for a user with no row: a missing
+    // answer must not remove screens somebody was using yesterday.
+    if (fy.tabs) TABS = fy.tabs;
+    CAN_PL = TABS.pnl !== false;
+
+    $('tabLedgers').hidden = TABS.ledgers === false;
+    $('tabOrders').hidden  = TABS.orders  === false;
+    $('tabRecent').hidden  = TABS.recent  === false;
+    $('tabPL').hidden      = !CAN_PL;
+
+    // Standing on a screen that has just been taken away, go somewhere allowed
+    // rather than sitting on a dead tab waiting for a refusal.
+    var on = { ledgers: 'ledgers', orders: 'orders', recent: 'recent', pl: 'pnl' }[VIEW];
+    if (on && TABS[on] === false) firstAllowedScreen();
+  }
+
+  /** The leftmost screen this login still has, or a plain message if none. */
+  function firstAllowedScreen() {
+    if (TABS.ledgers !== false) return showLedgers();
+    if (TABS.orders  !== false) return showOrders();
+    if (TABS.recent  !== false) return showRecent();
+    if (TABS.pnl     !== false) return showProfitLoss();
+    $('main').innerHTML = '<div class="empty">' +
+      t('This login has no screens. Ask for access to be turned on.') + '</div>';
   }
 
   function buildPeriods(fy) {
@@ -587,6 +615,7 @@
 
   function reload() {
     if (VIEW === 'pl') { showProfitLoss(); return; }
+    if (TABS.ledgers === false) { firstAllowedScreen(); return; }
     if (current) { openLedger(current); return; }
     $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
     var ticket = takeTicket();
@@ -1392,9 +1421,14 @@
       .then(function (r) {
         buildPeriods(r.data);
         showRights(r.data);
+
+        // Asking for the party list when Ledgers is not this login's would be
+        // refused by the server — correctly — and the app would open on an
+        // error instead of on the screen they do have.
+        if (TABS.ledgers === false) { firstAllowedScreen(); return null; }
         return api('parties', { token: TOKEN, from: PERIOD.from, to: PERIOD.to });
       })
-      .then(function (r) { parties = r.data; backToList(); })
+      .then(function (r) { if (!r) return; parties = r.data; backToList(); })
       .catch(fail);
   }
 
