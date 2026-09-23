@@ -194,7 +194,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 30</span>
+      <span class="note" id="build" style="cursor:pointer">build 31</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -328,6 +328,19 @@
     'Nothing waiting to be sent.': '\u0aae\u0acb\u0a95\u0ab2\u0ab5\u0abe\u0aa8\u0ac1\u0a82 \u0a95\u0ab6\u0ac1\u0a82 \u0aac\u0abe\u0a95\u0ac0 \u0aa8\u0aa5\u0ac0.',
 
     'This login has no screens. Ask for access to be turned on.': '\u0a86 \u0ab2\u0acb\u0a97\u0abf\u0aa8\u0aae\u0abe\u0a82 \u0a95\u0acb\u0a88 \u0ab8\u0acd\u0a95\u0acd\u0ab0\u0ac0\u0aa8 \u0aa8\u0aa5\u0ac0. \u0a8d\u0a95\u0acd\u0ab8\u0ac7\u0ab8 \u0a9a\u0abe\u0ab2\u0ac1 \u0a95\u0ab0\u0abe\u0ab5\u0ab5\u0abe \u0a95\u0ab9\u0acb.',
+
+    'Today\'s orders': '\u0a86\u0a9c\u0aa8\u0abe \u0a93\u0ab0\u0acd\u0aa1\u0ab0',
+    'Nothing ordered today.': '\u0a86\u0a9c\u0ac7 \u0a95\u0acb\u0a88 \u0a93\u0ab0\u0acd\u0aa1\u0ab0 \u0aa8\u0aa5\u0ac0.',
+    'Edit': '\u0ab8\u0ac1\u0aa7\u0abe\u0ab0\u0acb',
+    'Delete this order': '\u0a86 \u0a93\u0ab0\u0acd\u0aa1\u0ab0 \u0a95\u0abe\u0aa2\u0ac0 \u0aa8\u0abe\u0a96\u0acb',
+    'Save changes': '\u0aab\u0ac7\u0ab0\u0aab\u0abe\u0ab0 \u0ab8\u0abe\u0a9a\u0ab5\u0acb',
+    'Saving\u2026': '\u0ab8\u0abe\u0a9a\u0ab5\u0ac7 \u0a9b\u0ac7\u2026',
+    'Sent': '\u0aae\u0acb\u0a95\u0ab2\u0abe\u0aaf\u0acb',
+    'Not sent': '\u0aae\u0acb\u0a95\u0ab2\u0acd\u0aaf\u0acb \u0aa8\u0aa5\u0ac0',
+    'Delivered': '\u0aa1\u0abf\u0ab2\u0abf\u0ab5\u0ab0\u0ac0 \u0aa5\u0a88',
+    'Delivered \u2014 correct it in Jolly': '\u0aa1\u0abf\u0ab2\u0abf\u0ab5\u0ab0\u0ac0 \u0aa5\u0a88 \u0a97\u0a88 \u2014 Jolly \u0aae\u0abe\u0a82 \u0ab8\u0ac1\u0aa7\u0abe\u0ab0\u0acb',
+    'Delete this order? This cannot be undone.': '\u0a86 \u0a93\u0ab0\u0acd\u0aa1\u0ab0 \u0a95\u0abe\u0aa2\u0ac0 \u0aa8\u0abe\u0a96\u0ab5\u0acb \u0a9b\u0ac7? \u0a86 \u0aaa\u0abe\u0a9b\u0ac1\u0a82 \u0aa8\u0ab9\u0ac0\u0a82 \u0a86\u0ab5\u0ac7.',
+    'The plant already has the old figures \u2014 send it again.': '\u0aaa\u0acd\u0ab2\u0abe\u0aa8\u0acd\u0a9f \u0aaa\u0abe\u0ab8\u0ac7 \u0a9c\u0ac2\u0aa8\u0abe \u0a86\u0a82\u0a95\u0aa1\u0abe \u0a9b\u0ac7 \u2014 \u0aab\u0ab0\u0ac0 \u0aae\u0acb\u0a95\u0ab2\u0acb.',
 
     // What the script itself says, translated where it is shown.
     'Your session has ended. Please sign in again.': '\u0ab8\u0aa4\u0acd\u0ab0 \u0aaa\u0ac2\u0ab0\u0ac1\u0a82 \u0aa5\u0aaf\u0ac1\u0a82. \u0aab\u0ab0\u0ac0 \u0ab8\u0abe\u0a87\u0aa8 \u0a87\u0aa8 \u0a95\u0ab0\u0acb.',
@@ -899,6 +912,117 @@
     }
   }
 
+  // --- the day's chalans, and correcting one --------------------------------
+
+  /** Which chalan is being corrected, or null when placing a new one. */
+  var EDITING = null;
+
+  /**
+   * What was ordered today, so a wrong rate or a wrong party is caught while
+   * it is still only a row in Jolly.
+   *
+   * A delivered chalan is listed and NOT editable. Seeing it is the point: it
+   * explains why it cannot be changed here. Leaving it out would read as the
+   * order having vanished.
+   */
+  function showTodaysOrders() {
+    mark('showTodaysOrders');
+    VIEW = 'orders';
+    current = null;
+    setTab('tabOrders');
+    $('search').hidden = true; $('back').hidden = true;
+    $('periods').hidden = true; $('range').hidden = true;
+    $('title').textContent = t("Today's orders");
+    $('main').innerHTML = '<div class="empty">' + t('Loading\u2026') + '</div>';
+
+    var ticket = takeTicket();
+    api('ordersRecent', { token: TOKEN, days: 1 }).then(function (r) {
+      if (!stillWanted(ticket)) return;
+      var orders = r.data || [];
+
+      if (!orders.length) {
+        $('main').innerHTML = '<div class="empty">' + t('Nothing ordered today.') + '</div>' +
+          '<button class="more" id="neworder">' + t('New order') + '</button>';
+        $('neworder').onclick = function () { EDITING = null; showOrders(); };
+        return;
+      }
+
+      $('main').innerHTML = orders.map(function (o, i) {
+        var state = o.delivered ? t('Delivered') : (o.sent ? t('Sent') : t('Not sent'));
+        return '<div class="card">' +
+          '<div class="head"><b>' + esc(o.party) + '</b>' +
+            '<span class="note">' + esc(o.orderNo) + ' \u00b7 ' + esc(state) + '</span></div>' +
+          o.lines.map(function (l) {
+            return '<div class="note" style="margin-top:6px">' + esc(orderLineText(l)) + '</div>';
+          }).join('') +
+          '<div class="total"><span>' + t('Total') + '</span><span>' + money(o.total) + '</span></div>' +
+          (o.delivered
+            ? '<div class="note">' + t('Delivered \u2014 correct it in Jolly') + '</div>'
+            : '<button class="more" data-edit="' + i + '">' + t('Edit') + '</button>') +
+        '</div>';
+      }).join('') +
+      '<button class="more" id="neworder">' + t('New order') + '</button>';
+
+      Array.prototype.forEach.call(document.querySelectorAll('[data-edit]'), function (el) {
+        el.onclick = function () { openForEdit(orders[+el.dataset.edit]); };
+      });
+      $('neworder').onclick = function () { EDITING = null; showOrders(); };
+    }).catch(fail);
+  }
+
+  /**
+   * Remove the chalan being corrected.
+   *
+   * Confirmed first, and said plainly: this is the one action on these screens
+   * that destroys something rather than changing it. The server refuses a
+   * delivered order anyway, so the confirmation is about intent, not safety.
+   */
+  function deleteThisOrder() {
+    if (!EDITING) return;
+    if (!confirm(t('Delete this order? This cannot be undone.'))) return;
+
+    var was = EDITING;
+    $('killorder').disabled = true;
+    api('orderDelete', { token: TOKEN, orderNo: was.orderNo })
+      .then(function (r) {
+        EDITING = null;
+        draft = []; draftParty = ''; draftNote = '';
+        showBatch('Order ' + was.orderNo + ' deleted.' +
+                  (r.data && r.data.wasSent
+                    ? '\n' + t('The plant already has the old figures \u2014 send it again.')
+                    : ''));
+      })
+      .catch(function (e) {
+        if ($('killorder')) $('killorder').disabled = false;
+        alert(e.message);
+      });
+  }
+
+  /** One line, in the shorthand the plant is already sent. */
+  function orderLineText(l) {
+    return l.item + '   ' + trimNum(l.qty) + ' \u00d7 ' + trimNum(l.rate) + '/-' +
+      (l.packs ? '  (' + trimNum(l.packs) + (l.pack ? ' ' + l.pack : '') + ')' : '') +
+      (l.gst ? ' + GST' : '');
+  }
+
+  /**
+   * Correcting an order REUSES the order form, so an edit is checked exactly as
+   * a new order is. The server shares its line checking for the same reason: the
+   * path used less often is the one that would drift, and an edit is a
+   * correction made in a hurry.
+   */
+  function openForEdit(order) {
+    mark('openForEdit(' + order.orderNo + ')');
+    EDITING = order;
+    draftParty = order.party;
+    draftNote = order.notes || '';
+    draft = order.lines.map(function (l) {
+      return { item: l.item, pack: l.pack, qty: Number(l.qty) || 0,
+               packs: Number(l.packs) || 0, rate: Number(l.rate) || 0, gst: !!l.gst };
+    });
+    showOrders();
+  }
+
   // --- orders ---------------------------------------------------------------
 
   var lists = null;      // items and pack types, fetched once
@@ -916,7 +1040,7 @@
     setTab('tabOrders');
     $('search').hidden = true; $('back').hidden = true;
     $('periods').hidden = true; $('range').hidden = true;
-    $('title').textContent = t('New order');
+    $('title').textContent = EDITING ? t('Save changes') : t('New order');
     $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
 
     var ticket = takeTicket();
@@ -948,8 +1072,11 @@
       '<datalist id="partyList">' +
         parties.map(function (p) { return '<option value="' + esc(p.name) + '">'; }).join('') +
       '</datalist>' +
+      // An edit opens on the order's OWN date. Defaulting to today would
+      // silently move a chalan placed yesterday into today's numbering and
+      // today's day book, which is a different order in every way that counts.
       '<div class="field"><label>' + t('Date') + '</label><input type="date" id="odate" value="' +
-        todayISO() + '"></div>' +
+        ((EDITING && EDITING.dateISO) || todayISO()) + '"></div>' +
       // One note for the order, not one per line. It rides to the Narration
       // column of every entry the order makes, and into the message, so the
       // plant reads the same instruction the ledger keeps.
@@ -997,7 +1124,15 @@
     html +=
       '<button class="more" id="addline">' + t('Add another line') + '</button>' +
       '<div class="total"><span>' + t('Total') + '</span><span>' + money(draftTotal()) + '</span></div>' +
-      '<button class="primary" id="place">' + t('Place order') + '</button>' +
+      '<button class="primary" id="place">' +
+        (EDITING ? t('Save changes') : t('Place order')) + '</button>' +
+      // Deleting is only offered while correcting, and only ever removes the
+      // chalan on screen. The server refuses one that is ticked as delivered,
+      // because that row is on its way to the ledger.
+      (EDITING
+        ? '<button class="more" id="killorder">' + t('Delete this order') + '</button>'
+        : '') +
+      '<button class="more" id="todays">' + t("Today's orders") + '</button>' +
       '<button class="more" id="batch">' + t('Orders waiting to send') + '</button>' +
       '<button class="more" id="newparty">' + t('Open a party with a balance') + '</button>' +
       '<button class="more" id="newcat">' + t('Add an expense category') + '</button>' +
@@ -1139,6 +1274,8 @@
   }
 
   function wireOrderForm() {
+    if ($('todays')) $('todays').onclick = showTodaysOrders;
+    if ($('killorder')) $('killorder').onclick = deleteThisOrder;
     $('oparty').oninput = function () { draftParty = this.value; judgeParty(); };
     if ($('onote')) $('onote').oninput = function () { draftNote = this.value; };
     $('oparty').onchange = function () {
@@ -1307,14 +1444,31 @@
     if (!lines.length) { alert('A line needs an item, a quantity and a rate.'); return; }
 
     $('place').disabled = true;
-    $('place').textContent = 'Saving…';
+    $('place').textContent = t('Saving…');
 
-    api('orderNew', { token: TOKEN, date: $('odate').value, party: party,
-                      notes: ($('onote') ? $('onote').value : ''), lines: lines })
-      .then(function (r) { showPlaced(r.data); })
+    // Same form, same checks, two destinations. The chalan number is the
+    // server's to keep: an edit must not renumber the order the plant is
+    // already holding.
+    var sending = EDITING
+      ? api('orderEdit', { token: TOKEN, orderNo: EDITING.orderNo,
+                           date: $('odate').value, party: party,
+                           notes: ($('onote') ? $('onote').value : ''), lines: lines })
+      : api('orderNew', { token: TOKEN, date: $('odate').value, party: party,
+                          notes: ($('onote') ? $('onote').value : ''), lines: lines });
+
+    sending
+      .then(function (r) {
+        if (!EDITING) { showPlaced(r.data); return; }
+        var was = EDITING; EDITING = null;
+        draft = []; draftParty = ''; draftNote = '';
+        showBatch('Order ' + was.orderNo + ' updated.' +
+                  (r.data && r.data.wasSent
+                    ? '\n' + t('The plant already has the old figures \u2014 send it again.')
+                    : ''));
+      })
       .catch(function (e) {
         $('place').disabled = false;
-        $('place').textContent = 'Place order';
+        $('place').textContent = EDITING ? t('Save changes') : t('Place order');
         alert(e.message);
       });
   }
