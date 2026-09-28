@@ -145,6 +145,14 @@
   @media (prefers-color-scheme: dark) { .share { color: #6ddba0; } }
   .empty { color: var(--muted); text-align: center; padding: 40px 20px; }
 
+  /* What a figure used to be, in the Edits list. Struck through rather than
+     merely greyed: grey alone reads as "less important", and this is not less
+     important, it is no longer true. */
+  .was { color: var(--muted); text-decoration: line-through; }
+  /* A statement line offers to be corrected, so it has to look touchable. */
+  tr.entry { cursor: pointer; }
+  tr.entry:active { background: var(--line); }
+
   .chips { margin-top: 10px; }
   /* The period picker. Full width on purpose: it is the one control that says
      what every figure on the screen covers, so it should not look incidental. */
@@ -198,7 +206,7 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 32</span>
+      <span class="note" id="build" style="cursor:pointer">build 33</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
@@ -254,6 +262,23 @@
     'No expense head matches that.': '\u0a8f\u0ab5\u0ac1\u0a82 \u0a95\u0acb\u0a88 \u0a96\u0ab0\u0acd\u0a9a \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0aae\u0ab3\u0ac0 \u0aa8\u0ab9\u0ac0\u0a82.',
     'Nothing spent in this period. Search for a head to see it anyway.': '\u0a86 \u0a97\u0abe\u0ab3\u0abe\u0aae\u0abe\u0a82 \u0a95\u0a82\u0a88 \u0a96\u0ab0\u0acd\u0a9a \u0aa5\u0aaf\u0ac1\u0a82 \u0aa8\u0aa5\u0ac0. \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0a9c\u0acb\u0ab5\u0abe \u0aa8\u0abe\u0aae \u0ab6\u0acb\u0aa7\u0acb.',
     'Orders': '\u0a93\u0ab0\u0acd\u0aa1\u0ab0',
+    'Edits': '\u0aab\u0ac7\u0ab0\u0aab\u0abe\u0ab0',
+    'No edits.': '\u0a95\u0acb\u0a88 \u0aab\u0ac7\u0ab0\u0aab\u0abe\u0ab0 \u0aa8\u0aa5\u0ac0.',
+    'Correct this entry': '\u0a86 \u0a8f\u0aa8\u0acd\u0a9f\u0acd\u0ab0\u0ac0 \u0ab8\u0ac1\u0aa7\u0abe\u0ab0\u0acb',
+    'Ledger': '\u0a96\u0abe\u0aa4\u0ac1\u0a82',
+    'Sr/Ref': '\u0aa8\u0a82\u0aac\u0ab0',
+    'Amount': '\u0ab0\u0a95\u0aae',
+    'Why is it being changed?': '\u0ab6\u0abe \u0aae\u0abe\u0a9f\u0ac7 \u0aac\u0aa6\u0808\u0ab2\u0ac0 \u0ab0\u0ab9\u0acd\u0aaf\u0abe \u0a9b\u0acb?',
+    'e.g. bill was read wrong': '\u0aa6\u0abe.\u0aa4. \u0aac\u0abf\u0ab2 \u0a96\u0acb\u0a9f\u0ac1\u0a82 \u0ab5\u0a82\u0a9a\u0abe\u0aaf\u0ac1\u0a82 \u0ab9\u0aa4\u0ac1\u0a82',
+    'Save the correction': '\u0ab8\u0ac1\u0aa7\u0abe\u0ab0\u0acb \u0ab8\u0abe\u0a9a\u0ab5\u0acb',
+    'Remove this entry': '\u0a86 \u0a8f\u0aa8\u0acd\u0a9f\u0acd\u0ab0\u0ac0 \u0a95\u0abe\u0aa2\u0acb',
+    'Cancel': '\u0ab0\u0aa6 \u0a95\u0ab0\u0acb',
+    'Entry removed': '\u0a8f\u0aa8\u0acd\u0a9f\u0acd\u0ab0\u0ac0 \u0a95\u0abe\u0aa2\u0ac0 \u0aa8\u0abe\u0a96\u0ac0',
+    'Say briefly why it is being changed.': '\u0a9f\u0ac2\u0a82\u0a95\u0aae\u0abe\u0a82 \u0a95\u0ab9\u0acb \u0a95\u0ac7 \u0ab6\u0abe \u0aae\u0abe\u0a9f\u0ac7 \u0aac\u0aa6\u0808\u0ab2\u0ac0 \u0ab0\u0ab9\u0acd\u0aaf\u0abe \u0a9b\u0acb.',
+    'Remove this entry? The ledger will show that it was removed.': '\u0a86 \u0a8f\u0aa8\u0acd\u0a9f\u0acd\u0ab0\u0ac0 \u0a95\u0abe\u0aa2\u0ab5\u0ac0 \u0a9b\u0ac7? \u0a96\u0abe\u0aa4\u0abe\u0aae\u0abe\u0a82 \u0aa6\u0ac7\u0a96\u0abe\u0ab6\u0ac7 \u0a95\u0ac7 \u0aa4\u0ac7 \u0a95\u0abe\u0aa2\u0ac0 \u0aa8\u0abe\u0a96\u0ac0 \u0ab9\u0aa4\u0ac0.',
+    'This entry cannot be corrected yet. Open the ledger again and try once more.': '\u0a86 \u0a8f\u0aa8\u0acd\u0a9f\u0acd\u0ab0\u0ac0 \u0ab9\u0aae\u0aa3\u0abe\u0a82 \u0ab8\u0ac1\u0aa7\u0abe\u0ab0\u0ac0 \u0ab6\u0a95\u0abe\u0aaf \u0aa4\u0ac7\u0aae \u0aa8\u0aa5\u0ac0. \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0aab\u0ab0\u0ac0 \u0a96\u0acb\u0ab2\u0ac0\u0aa8\u0ac7 \u0aab\u0ab0\u0ac0 \u0aaa\u0acd\u0ab0\u0aaf\u0aa4\u0acd\u0aa8 \u0a95\u0ab0\u0acb.',
+    'These are kept in the app. They are not part of the statement you send.': '\u0a86 \u0a8f\u0aaa\u0aae\u0abe\u0a82 \u0a9c \u0ab0\u0ab9\u0ac7 \u0a9b\u0ac7. \u0aa4\u0aae\u0ac7 \u0aae\u0acb\u0a95\u0ab2\u0acb \u0a9b\u0acb \u0aa4\u0ac7 \u0ab8\u0acd\u0a9f\u0ac7\u0a9f\u0aae\u0ac7\u0aa8\u0acd\u0a9f\u0aae\u0abe\u0a82 \u0a86\u0aa8\u0acb \u0ab8\u0aae\u0abe\u0ab5\u0ac7\u0ab6 \u0aa8\u0aa5\u0ac0.',
+    'Back to the ledger': '\u0a96\u0abe\u0aa4\u0abe \u0aaa\u0ab0 \u0aaa\u0abe\u0a9b\u0abe',
     'Recent': '\u0aa4\u0abe\u0a9c\u0ac7\u0aa4\u0ab0\u0aa8\u0ac1\u0a82',
     'P&L': '\u0aa8\u0aab\u0acb-\u0aa8\u0ac1\u0a95\u0ab8\u0abe\u0aa8',
     'Search a party': '\u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0 \u0ab6\u0acb\u0aa7\u0acb',
@@ -1796,12 +1821,23 @@
           ' <span class="tag">' + side(d.balance) + '</span></div></div>' +
           '<div style="text-align:right"><div class="note">Debit ' + money(d.totalDebit) + '</div>' +
           '<div class="note">Credit ' + money(d.totalCredit) + '</div>' +
-          '<button class="share" id="share">WhatsApp</button></div></div>' +
+          '<button class="share" id="share">WhatsApp</button>' +
+          // Shown only when there is something to show, so its being there
+          // means something. It is OUTSIDE the table and never part of a line,
+          // which is what keeps it out of the WhatsApp text.
+          (d.edits && d.edits.length
+            ? '<button class="more" id="editlog" style="margin-top:6px">' +
+              t('Edits') + ' (' + d.edits.length + ')</button>'
+            : '') +
+          '</div></div>' +
         '<div class="scroll"><table><thead><tr>' +
           '<th>Date</th><th>Particulars</th><th>Debit</th><th>Credit</th><th>Balance</th>' +
         '</tr></thead><tbody>' + first +
-        d.lines.map(function (l) {
-          return '<tr><td>' + esc(l.date) + '</td>' +
+        d.lines.map(function (l, i) {
+          // data-i, not the id: the id is what the SERVER is told, and putting
+          // it in the page would let a stale screen name a row that has since
+          // been corrected. The index is read against the reply on screen.
+          return '<tr class="entry" data-i="' + i + '"><td>' + esc(l.date) + '</td>' +
             '<td>' + esc(l.source) + (l.ref ? ' · ' + esc(l.ref) : '') +
             (l.particulars ? '<div class="note">' + esc(l.particulars) + '</div>' : '') + '</td>' +
             '<td>' + (l.debit  ? money(l.debit)  : '') + '</td>' +
@@ -1816,7 +1852,177 @@
 
       if ($('all')) $('all').onclick = function () { openLedger(current, true); };
       $('share').onclick = shareLedger;
+      if ($('editlog')) $('editlog').onclick = showEdits;
+
+      // Tapping a line offers to correct it. An entry with no handle cannot be
+      // corrected — it says so rather than opening a form that would fail on
+      // saving, which is the same thing said later and less usefully.
+      Array.prototype.forEach.call(document.querySelectorAll('tr.entry'), function (el) {
+        el.onclick = function () { correctEntry(d.lines[+el.dataset.i]); };
+      });
     }).catch(fail);
+  }
+
+  // --- correcting a posted entry --------------------------------------------
+
+  /**
+   * WHY A CORRECTION IS NOT AN EDIT.
+   *
+   * The Ledger is append-only and each party's tab in the sheet is a live
+   * formula over it, so overwriting a posted figure restates history under
+   * somebody who is reading it. The server therefore cancels the old entry and
+   * appends the corrected one. All this screen does is collect the change and
+   * the reason for it.
+   *
+   * The reason is required. Six months on, a figure that moved says nothing
+   * about whether the bill was misread or the customer renegotiated, and the
+   * before-and-after cannot tell you which.
+   */
+  function correctEntry(line) {
+    if (!line) return;
+    if (!line.id) {
+      alert(t('This entry cannot be corrected yet. Open the ledger again and try once more.'));
+      return;
+    }
+    mark('correctEntry');
+
+    var isDebit = !!line.debit;
+    $('main').innerHTML =
+      '<div class="card">' +
+        '<h2>' + t('Correct this entry') + '</h2>' +
+        '<p class="note">' + esc(line.date) + ' \u00b7 ' + esc(line.source) +
+          (line.ref ? ' \u00b7 ' + esc(line.ref) : '') + '</p>' +
+        '<div class="field"><label>' + t('Date') + '</label>' +
+          '<input type="date" id="edate" value="' + esc(isoOf(line.date)) + '"></div>' +
+        '<div class="field"><label>' + t('Ledger') + '</label>' +
+          '<input id="eparty" list="partynames" value="' + esc(current) + '"></div>' +
+        '<datalist id="partynames">' +
+          parties.map(function (p) { return '<option value="' + esc(p.name) + '">'; }).join('') +
+        '</datalist>' +
+        '<div class="field"><label>' + t('Sr/Ref') + '</label>' +
+          '<input id="eref" value="' + esc(line.ref || '') + '"></div>' +
+        '<div class="field"><label>' + t('Particulars') + '</label>' +
+          '<input id="eparticulars" value="' + esc(line.particulars || '') + '"></div>' +
+        '<div class="field"><label>' + t('Amount') + '</label>' +
+          '<input type="number" inputmode="decimal" step="0.01" id="eamount" value="' +
+          (isDebit ? line.debit : line.credit) + '"></div>' +
+        '<div class="field"><label>Dr / Cr</label>' +
+          '<select id="eside">' +
+            '<option value="Dr"' + (isDebit ? ' selected' : '') + '>Dr</option>' +
+            '<option value="Cr"' + (isDebit ? '' : ' selected') + '>Cr</option>' +
+          '</select></div>' +
+        '<div class="field"><label>' + t('Why is it being changed?') + '</label>' +
+          '<input id="enote" placeholder="' + t('e.g. bill was read wrong') + '"></div>' +
+        '<button class="primary" id="esave">' + t('Save the correction') + '</button>' +
+        '<button class="more" id="edrop">' + t('Remove this entry') + '</button>' +
+        '<button class="more" id="ecancel">' + t('Cancel') + '</button>' +
+      '</div>';
+
+    $('ecancel').onclick = function () { openLedger(current, true); };
+    $('esave').onclick = function () { saveCorrection(line, false); };
+    $('edrop').onclick = function () { saveCorrection(line, true); };
+  }
+
+  /** 'dd MMM yyyy' back into what a date input wants. */
+  function isoOf(printed) {
+    var d = new Date(printed);
+    if (isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' +
+           ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+           ('0' + d.getDate()).slice(-2);
+  }
+
+  function saveCorrection(line, removing) {
+    var note = $('enote').value.trim();
+    if (!note) { alert(t('Say briefly why it is being changed.')); $('enote').focus(); return; }
+    if (removing && !confirm(t('Remove this entry? The ledger will show that it was removed.'))) return;
+
+    $('esave').disabled = true;
+    if ($('edrop')) $('edrop').disabled = true;
+
+    var body = removing
+      ? { token: TOKEN, id: line.id, note: note }
+      : { token: TOKEN, id: line.id, note: note,
+          date: $('edate').value,
+          party: $('eparty').value.trim(),
+          ref: $('eref').value.trim(),
+          particulars: $('eparticulars').value.trim(),
+          amount: $('eamount').value,
+          side: $('eside').value };
+
+    api(removing ? 'entryDelete' : 'entryEdit', body)
+      .then(function () {
+        // Reopened rather than patched on screen: the running balances, the
+        // totals and the brought-forward figure all move, and recomputing them
+        // here would be a second implementation of the arithmetic that could
+        // disagree with the sheet's.
+        openLedger(current, true);
+      })
+      .catch(function (e) {
+        $('esave').disabled = false;
+        if ($('edrop')) $('edrop').disabled = false;
+        alert(e.message);
+      });
+  }
+
+  /**
+   * What has been corrected on this ledger, and by whom.
+   *
+   * IT IS NEVER PART OF THE STATEMENT. The WhatsApp text is built from
+   * d.lines, and nothing here touches those — so a customer sent a statement
+   * receives the corrected figures and no account of how they got that way,
+   * which is what the person sending it would say out loud anyway.
+   */
+  function showEdits() {
+    mark('showEdits');
+    var d = lastLedger;
+    if (!d) { openLedger(current, true); return; }
+
+    var rows = (d.edits || []).map(function (e) {
+      var what = e.removed
+        ? '<div class="note">' + t('Entry removed') + '</div>' +
+          '<div>' + faceText(e.was) + '</div>'
+        : e.changed.map(function (f) {
+            return '<div>' + t(fieldName(f)) + ': <span class="was">' +
+                   esc(fieldOf(e.was, f)) + '</span> \u2192 <b>' +
+                   esc(fieldOf(e.now, f)) + '</b></div>';
+          }).join('');
+
+      return '<div class="pl" style="padding:10px 14px">' +
+               '<div class="note">' + esc(e.at) +
+                 (e.by ? ' \u00b7 ' + esc(e.by) : '') + '</div>' +
+               what +
+               (e.note ? '<div class="note" style="margin-top:6px">\u201c' +
+                         esc(e.note) + '\u201d</div>' : '') +
+             '</div>';
+    }).join('');
+
+    $('main').innerHTML =
+      '<p class="note">' + t('These are kept in the app. They are not part of the statement you send.') +
+      '</p>' + (rows || '<div class="empty">' + t('No edits.') + '</div>') +
+      '<button class="more" id="backfromedits">' + t('Back to the ledger') + '</button>';
+
+    $('backfromedits').onclick = function () { openLedger(current, true); };
+  }
+
+  function fieldName(f) {
+    return { date: 'Date', party: 'Ledger', ref: 'Sr/Ref',
+             particulars: 'Particulars', amount: 'Amount' }[f] || f;
+  }
+
+  function fieldOf(face, f) {
+    if (!face) return '';
+    if (f === 'amount') {
+      return money(face.debit || face.credit) + ' ' + (face.debit ? 'Dr' : 'Cr');
+    }
+    return face[f] == null ? '' : String(face[f]);
+  }
+
+  function faceText(face) {
+    if (!face) return '';
+    return esc(face.date) + ' \u00b7 ' + esc(face.particulars || face.ref || '') +
+           ' \u00b7 ' + money(face.debit || face.credit) +
+           ' ' + (face.debit ? 'Dr' : 'Cr');
   }
 
   // --- sending a ledger -----------------------------------------------------
