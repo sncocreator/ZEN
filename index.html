@@ -158,7 +158,11 @@
 
   .tabs { display: flex; gap: 4px; margin-bottom: 10px; }
   .tab {
-    flex: 1; padding: 9px; font-size: 14px; cursor: pointer;
+    /* Five tabs across a phone. min-width:0 is what lets them share the width
+       evenly — without it a flex item will not shrink below its text, so the
+       last tab is pushed off the right edge and cannot be tapped at all. */
+    flex: 1; min-width: 0; white-space: nowrap;
+    padding: 9px 2px; font-size: 13px; cursor: pointer;
     color: var(--muted); background: none; border: 0;
     border-bottom: 2px solid var(--line);
   }
@@ -194,12 +198,13 @@
       <!-- Which build is actually loaded. A phone can serve a cached copy for
            hours, and without this there is no way to tell that apart from a
            fault in the code — which cost an afternoon once. -->
-      <span class="note" id="build" style="cursor:pointer">build 31</span>
+      <span class="note" id="build" style="cursor:pointer">build 32</span>
       <button class="link" id="out">Sign out</button>
     </div>
     <h1 id="title">Ledgers</h1>
     <div class="tabs">
       <button class="tab on" id="tabLedgers">Ledgers</button>
+      <button class="tab" id="tabExpenses">Expenses</button>
       <button class="tab" id="tabOrders">Orders</button>
       <button class="tab" id="tabRecent">Recent</button>
       <button class="tab" id="tabPL">P&amp;L</button>
@@ -244,6 +249,10 @@
     'Signing in\u2026': '\u0ab8\u0abe\u0a87\u0aa8 \u0a87\u0aa8 \u0aa5\u0abe\u0aaf \u0a9b\u0ac7\u2026',
     'Sign out': '\u0ab8\u0abe\u0a87\u0aa8 \u0a86\u0a89\u0a9f',
     '\u2039 All parties': '\u2039 \u0aac\u0aa7\u0ac0 \u0aaa\u0abe\u0ab0\u0acd\u0a9f\u0ac0',
+    '\u2039 All expenses': '\u2039 \u0aac\u0aa7\u0abe \u0a96\u0ab0\u0acd\u0a9a',
+    'Search an expense head': '\u0a96\u0ab0\u0acd\u0a9a\u0aa8\u0ac1\u0a82 \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0ab6\u0acb\u0aa7\u0acb',
+    'No expense head matches that.': '\u0a8f\u0ab5\u0ac1\u0a82 \u0a95\u0acb\u0a88 \u0a96\u0ab0\u0acd\u0a9a \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0aae\u0ab3\u0ac0 \u0aa8\u0ab9\u0ac0\u0a82.',
+    'Nothing spent in this period. Search for a head to see it anyway.': '\u0a86 \u0a97\u0abe\u0ab3\u0abe\u0aae\u0abe\u0a82 \u0a95\u0a82\u0a88 \u0a96\u0ab0\u0acd\u0a9a \u0aa5\u0aaf\u0ac1\u0a82 \u0aa8\u0aa5\u0ac0. \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0a9c\u0acb\u0ab5\u0abe \u0aa8\u0abe\u0aae \u0ab6\u0acb\u0aa7\u0acb.',
     'Orders': '\u0a93\u0ab0\u0acd\u0aa1\u0ab0',
     'Recent': '\u0aa4\u0abe\u0a9c\u0ac7\u0aa4\u0ab0\u0aa8\u0ac1\u0a82',
     'P&L': '\u0aa8\u0aab\u0acb-\u0aa8\u0ac1\u0a95\u0ab8\u0abe\u0aa8',
@@ -411,21 +420,22 @@
    */
   function localizeStatic() {
     [['signinNote', 'Sign in to continue.'],
-     ['go', 'Sign in'], ['out', 'Sign out'], ['back', '\u2039 All parties'],
-     ['tabLedgers', 'Ledgers'], ['tabOrders', 'Orders'],
+     ['go', 'Sign in'], ['out', 'Sign out'], ['back', backLabel()],
+     ['tabLedgers', 'Ledgers'], ['tabExpenses', 'Expenses'],
+     ['tabOrders', 'Orders'],
      ['tabRecent', 'Recent'], ['tabPL', 'P&L'],
      ['rangeTo', 'to'], ['apply', 'Apply']
     ].forEach(function (pair) {
       var el = $(pair[0]);
       if (el) el.textContent = t(pair[1]);
     });
-    [['u', 'Username'], ['p', 'Password'], ['search', 'Search a party']]
+    [['u', 'Username'], ['p', 'Password'], ['search', searchPrompt()]]
       .forEach(function (pair) {
         var el = $(pair[0]);
         if (el) el.placeholder = t(pair[1]);
       });
-    if ($('title') && VIEW === 'ledgers' && !current) {
-      $('title').textContent = t('Ledgers');
+    if ($('title') && (VIEW === 'ledgers' || VIEW === 'expenses') && !current) {
+      $('title').textContent = t(listTitle());
     }
   }
 
@@ -584,7 +594,7 @@
   var CAN_PL = true;
 
   /** Which screens this login may open, keyed as the App Access tab keys them. */
-  var TABS = { ledgers: true, orders: true, recent: true, pnl: true };
+  var TABS = { ledgers: true, expenses: true, orders: true, recent: true, pnl: true };
 
   function showRights(fy) {
     // The language travels with the rights because both answer the same
@@ -601,20 +611,35 @@
     if (fy.idleMinutes > 0) IDLE_MINUTES = fy.idleMinutes;
     CAN_PL = TABS.pnl !== false;
 
-    $('tabLedgers').hidden = TABS.ledgers === false;
+    $('tabLedgers').hidden  = TABS.ledgers  === false;
+    $('tabExpenses').hidden = TABS.expenses === false;
     $('tabOrders').hidden  = TABS.orders  === false;
     $('tabRecent').hidden  = TABS.recent  === false;
     $('tabPL').hidden      = !CAN_PL;
 
     // Standing on a screen that has just been taken away, go somewhere allowed
     // rather than sitting on a dead tab waiting for a refusal.
-    var on = { ledgers: 'ledgers', orders: 'orders', recent: 'recent', pl: 'pnl' }[VIEW];
+    var on = { ledgers: 'ledgers', expenses: 'expenses', orders: 'orders',
+               recent: 'recent', pl: 'pnl' }[VIEW];
     if (on && TABS[on] === false) firstAllowedScreen();
+  }
+
+  /**
+   * Whether either ledger screen is this login's.
+   *
+   * The party list and a statement are one request each serving two screens, and
+   * the server decides which rows to send from the same two rights — so the app
+   * must ask the same question the server does, or the two disagree about
+   * whether there is anything to fetch.
+   */
+  function canSeeAnyLedger() {
+    return TABS.ledgers !== false || TABS.expenses !== false;
   }
 
   /** The leftmost screen this login still has, or a plain message if none. */
   function firstAllowedScreen() {
-    if (TABS.ledgers !== false) return showLedgers();
+    if (TABS.ledgers  !== false) return showLedgers();
+    if (TABS.expenses !== false) return showExpenses();
     if (TABS.orders  !== false) return showOrders();
     if (TABS.recent  !== false) return showRecent();
     if (TABS.pnl     !== false) return showProfitLoss();
@@ -665,7 +690,14 @@
 
   function reload() {
     if (VIEW === 'pl') { showProfitLoss(); return; }
-    if (TABS.ledgers === false) { firstAllowedScreen(); return; }
+    // One request serves both ledger screens, so it is asked for whenever
+    // EITHER is allowed. Testing only Ledgers here sent a login that has just
+    // Expenses to firstAllowedScreen(), which opens Expenses, which arrives
+    // back here — round for ever, showing nothing.
+    if (!canSeeAnyLedger()) { firstAllowedScreen(); return; }
+    // And if the list on screen is the one this login does NOT have, move to the
+    // one it does rather than drawing an empty list under its heading.
+    if (TABS[LIST] === false) LIST = LIST === 'expenses' ? 'ledgers' : 'expenses';
     if (current) { openLedger(current); return; }
     $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
     var ticket = takeTicket();
@@ -755,15 +787,49 @@
            '<span class="v ' + (cls2 === 'tot' ? 'tot' : '') + '">' + money(value) + '</span></div>';
   }
 
-  function showLedgers() {
-    mark('showLedgers');
-    VIEW = 'ledgers';
+  /**
+   * THE TWO LEDGER SCREENS, which are one list read two ways.
+   *
+   * Every expense head has a row in the Parties tab — a category is a ledger
+   * like any other here, which is what gives it a balance and a statement — so
+   * for a year the Ledgers screen listed the customers you chase for money in
+   * among heads you only ever spend under. The two are looked at for entirely
+   * different reasons and one list cannot serve both.
+   *
+   * The split is the Kind column on that tab, which the sheet fills in from the
+   * Categories and Assets lists. NOTHING HERE DECIDES WHAT AN EXPENSE IS: a
+   * screen guessing from the name would put Transport with the costs, and
+   * Transport Traders with them too.
+   *
+   * ONE request serves both. The party list takes about twelve seconds, and
+   * asking again for something that differs only in which rows are drawn would
+   * make switching tabs cost the whole wait a second time.
+   */
+  var LIST = 'ledgers';           // which of the two is on screen
+
+  function showLedgers() { openListScreen('ledgers'); }
+  function showExpenses() { openListScreen('expenses'); }
+
+  function openListScreen(which) {
+    mark('show' + (which === 'expenses' ? 'Expenses' : 'Ledgers'));
+    LIST = which;
+    VIEW = which;
     current = null;
-    setTab('tabLedgers');
+    setTab(which === 'expenses' ? 'tabExpenses' : 'tabLedgers');
     $('search').hidden = false; $('back').hidden = true;
     $('periods').hidden = false;
-    $('title').textContent = t('Ledgers');
+    $('search').placeholder = t(searchPrompt());
+    $('title').textContent = t(listTitle());
     reload();
+  }
+
+  /** What the heading says, what the search box asks for, where Back goes. */
+  function listTitle() { return LIST === 'expenses' ? 'Expenses' : 'Ledgers'; }
+  function searchPrompt() {
+    return LIST === 'expenses' ? 'Search an expense head' : 'Search a party';
+  }
+  function backLabel() {
+    return LIST === 'expenses' ? '\u2039 All expenses' : '\u2039 All parties';
   }
 
   /**
@@ -805,7 +871,7 @@
   }
 
   function setTab(which) {
-    ['tabLedgers', 'tabOrders', 'tabRecent', 'tabPL'].forEach(function (id) {
+    ['tabLedgers', 'tabExpenses', 'tabOrders', 'tabRecent', 'tabPL'].forEach(function (id) {
       $(id).classList.toggle('on', id === which);
     });
   }
@@ -1628,7 +1694,8 @@
         // slow dictionary should not hold up the ledgers.
         loadWords();
 
-        if (TABS.ledgers === false) { firstAllowedScreen(); return null; }
+        if (!canSeeAnyLedger()) { firstAllowedScreen(); return null; }
+        if (TABS[LIST] === false) LIST = LIST === 'expenses' ? 'ledgers' : 'expenses';
         return api('parties', { token: TOKEN, from: PERIOD.from, to: PERIOD.to });
       })
       .then(function (r) { if (!r) return; parties = r.data; backToList(); })
@@ -1640,22 +1707,37 @@
     // The party list is the Ledgers tab, whatever called this. Typing in the
     // search box reaches here directly, and used to leave another tab underlined
     // over a screenful of ledgers.
-    VIEW = 'ledgers';
-    setTab('tabLedgers');
+    VIEW = LIST;
+    setTab(LIST === 'expenses' ? 'tabExpenses' : 'tabLedgers');
     var q = (filter || '').trim().toLowerCase();
+    var wantExpense = LIST === 'expenses';
 
     // Nothing owed, nothing shown — until you go looking for it. A party at nil
     // is off the list, because every party ever opened has a row in Parties and
     // the ones that matter were buried among them. But a settled account is not
     // gone: type any part of the name and it appears, balance and all.
     var shown = parties.filter(function (p) {
+      // A row with no kind is a party. An older script answers without the
+      // field at all, and then every ledger reads as a party — which is exactly
+      // how the app behaved before this screen existed, rather than an empty
+      // list nobody can explain.
+      if (((p.kind || 'Party') !== 'Party') !== wantExpense) return false;
       if (p.name.toLowerCase().indexOf(q) === -1) return false;
       return q ? true : p.balance !== 0;
     });
 
     $('main').innerHTML = shown.length === 0
-      ? '<div class="empty">' + (parties.length ? t('No party matches that.') : t('No entries yet.')) +
-        (!q && parties.length ? '<br><span class="note">' + t('Nothing outstanding. Search for a name to see a settled account.') + '</span>' : '') +
+      ? '<div class="empty">' +
+        (parties.length
+          ? t(wantExpense ? 'No expense head matches that.' : 'No party matches that.')
+          : t('No entries yet.')) +
+        (!q && parties.length
+          ? '<br><span class="note">' +
+            t(wantExpense
+                ? 'Nothing spent in this period. Search for a head to see it anyway.'
+                : 'Nothing outstanding. Search for a name to see a settled account.') +
+            '</span>'
+          : '') +
         '</div>'
       : shown.map(function (p, i) {
           return '<div class="row" data-i="' + i + '">' +
@@ -1675,12 +1757,13 @@
   function openLedger(name, showAll) {
     mark('openLedger(' + name + ')');
     current = name;
-    VIEW = 'ledgers';
-    // A ledger belongs to the Ledgers tab. Without this the underline could be
-    // left over from an earlier visit to Orders, so the tab said one thing and
-    // the screen said another — which is indistinguishable from the app having
-    // ignored the tap.
-    setTab('tabLedgers');
+    VIEW = LIST;
+    // A statement belongs to the tab it was opened from — Ledgers for a party,
+    // Expenses for a head. Without this the underline could be left over from
+    // an earlier visit to Orders, so the tab said one thing and the screen said
+    // another, which is indistinguishable from the app having ignored the tap.
+    setTab(LIST === 'expenses' ? 'tabExpenses' : 'tabLedgers');
+    $('back').textContent = t(backLabel());
     $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
     $('search').hidden = true; $('back').hidden = false;
     $('periods').hidden = false;
@@ -1796,7 +1879,7 @@
     mark('backToList');
     current = null;
     $('search').hidden = false; $('back').hidden = true;
-    $('title').textContent = t('Ledgers');
+    $('title').textContent = t(listTitle());
     showList($('search').value);
   }
 
@@ -1807,6 +1890,7 @@
   $('out').onclick = signOut;
   $('build').onclick = showTrail;
   $('tabLedgers').onclick = showLedgers;
+  $('tabExpenses').onclick = showExpenses;
   $('tabOrders').onclick = showOrders;
   $('tabRecent').onclick = showRecent;
   $('tabPL').onclick = showProfitLoss;
