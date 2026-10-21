@@ -782,9 +782,15 @@
           '<div class="l head"><span>' + t('What was sold') + '</span><span></span></div>';
         sold.forEach(function (i) {
           var unit = i.unit ? i.unit.charAt(0).toUpperCase() + i.unit.slice(1) : '';
-          html += '<div class="l sub"><span>' + esc(i.item) + ' <span class="note">' +
+          // Under the name, in the grey sub-line with the quantity: the average
+          // price (what it went out at, per unit), so a long name plus quantity
+          // plus rate cannot crowd the sales figure at phone width. Left off when
+          // the quantity is nil, so nothing is divided by nothing.
+          html += '<div class="l sub"><span>' + esc(i.item) + '<br><span class="note">' +
             Number(i.qty).toLocaleString('en-IN', { maximumFractionDigits: 3 }) +
-            (unit ? ' ' + esc(unit) : '') + '</span></span>' +
+            (unit ? ' ' + esc(unit) : '') +
+            (Number(i.qty) > 0 ? ' · @ ' + money(i.sales / i.qty) : '') +
+            '</span></span>' +
             '<span class="v">' + money(i.sales) + '</span></div>';
         });
         html += '</div>';
