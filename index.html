@@ -767,10 +767,28 @@
         '<div class="l head"><span>' + t('Income') + '</span><span></span></div>' +
         line(t('Sales'), d.sales) +
         '<div class="l sub"><span class="note">' +
-          (d.soldQty ? money(d.soldQty) + ' units, no GST' : 'no GST') +
+          'at goods value, no GST' +
         '</span><span></span></div>' +
         line(t('Cost of goods sold'), d.costOfSales) +
         line(t('Gross profit'), d.gross, 'tot') + '</div>';
+
+      // What was sold, item by item (21 Oct 2026). The old note beside Sales said
+      // "N units", which added litres to kilos. Each item now shows its own
+      // quantity and unit with its sales, as the Profit tab in the sheet does.
+      // An older server sends no soldByItem, and then the block is simply absent.
+      var sold = d.soldByItem || [];
+      if (sold.length) {
+        html += '<div class="pl">' +
+          '<div class="l head"><span>' + t('What was sold') + '</span><span></span></div>';
+        sold.forEach(function (i) {
+          var unit = i.unit ? i.unit.charAt(0).toUpperCase() + i.unit.slice(1) : '';
+          html += '<div class="l sub"><span>' + esc(i.item) + ' <span class="note">' +
+            Number(i.qty).toLocaleString('en-IN', { maximumFractionDigits: 3 }) +
+            (unit ? ' ' + esc(unit) : '') + '</span></span>' +
+            '<span class="v">' + money(i.sales) + '</span></div>';
+        });
+        html += '</div>';
+      }
 
       html += '<div class="pl">' +
         '<div class="l head"><span>' + t('Expenses') + '</span><span></span></div>';
