@@ -382,6 +382,12 @@
     'Ticked bills come to more than the amount. The last one stays part open.': '\u0a9f\u0abf\u0a95 \u0a95\u0ab0\u0ac7\u0ab2\u0abe \u0aac\u0abf\u0ab2 \u0ab0\u0a95\u0aae\u0aa5\u0ac0 \u0ab5\u0aa7\u0ac1 \u0aa5\u0abe\u0aaf \u0a9b\u0ac7. \u0a9b\u0ac7\u0ab2\u0acd\u0ab2\u0ac1\u0a82 \u0aac\u0abf\u0ab2 \u0a85\u0aa1\u0aa7\u0ac1\u0a82 \u0aac\u0abe\u0a95\u0ac0 \u0ab0\u0ab9\u0ac7\u0ab6\u0ac7.',
     'Ticked bills come to less than the amount. The rest clears the oldest open bills.': '\u0a9f\u0abf\u0a95 \u0a95\u0ab0\u0ac7\u0ab2\u0abe \u0aac\u0abf\u0ab2 \u0ab0\u0a95\u0aae\u0aa5\u0ac0 \u0a93\u0a9b\u0abe \u0aa5\u0abe\u0aaf \u0a9b\u0ac7. \u0aac\u0abe\u0a95\u0ac0\u0aa8\u0ac0 \u0ab0\u0a95\u0aae \u0ab8\u0acc\u0aa5\u0ac0 \u0a9c\u0ac2\u0aa8\u0abe \u0aac\u0abe\u0a95\u0ac0 \u0aac\u0abf\u0ab2 \u0aaa\u0aa4\u0abe\u0ab5\u0ab6\u0ac7.',
     'No open bills.': '\u0a95\u0acb\u0a88 \u0aac\u0abe\u0a95\u0ac0 \u0aac\u0abf\u0ab2 \u0aa8\u0aa5\u0ac0.',
+    'Nothing here for a payment. This ledger has {n} {s} open, which a Received clears.': '\u0a9a\u0ac1\u0a95\u0ab5\u0aa3\u0ac0 \u0aae\u0abe\u0a9f\u0ac7 \u0a85\u0ab9\u0ac0\u0a82 \u0a95\u0a82\u0a88 \u0aa8\u0aa5\u0ac0. \u0a86 \u0a96\u0abe\u0aa4\u0abe\u0aae\u0abe\u0a82 {n} {s} \u0aac\u0abe\u0a95\u0ac0 \u0a9b\u0ac7, \u0a9c\u0ac7 \u201c\u0aae\u0ab3\u0acd\u0aaf\u0abe\u201d \u0aa5\u0ac0 \u0aaa\u0aa4\u0ac7 \u0a9b\u0ac7.',
+    'Nothing here for a receipt. This ledger has {n} {s} open, which a Paid clears.': '\u0aae\u0ab3\u0ac7\u0ab2\u0ac0 \u0ab0\u0a95\u0aae \u0aae\u0abe\u0a9f\u0ac7 \u0a85\u0ab9\u0ac0\u0a82 \u0a95\u0a82\u0a88 \u0aa8\u0aa5\u0ac0. \u0a86 \u0a96\u0abe\u0aa4\u0abe\u0aae\u0abe\u0a82 {n} {s} \u0aac\u0abe\u0a95\u0ac0 \u0a9b\u0ac7, \u0a9c\u0ac7 \u201c\u0a9a\u0ac2\u0a95\u0ab5\u0acd\u0aaf\u0abe\u201d \u0aa5\u0ac0 \u0aaa\u0aa4\u0ac7 \u0a9b\u0ac7.',
+    'This ledger is square. Nothing is open on either side.': '\u0a86 \u0a96\u0abe\u0aa4\u0ac1\u0a82 \u0ab8\u0ab0\u0a96\u0ac1\u0a82 \u0a9b\u0ac7. \u0aac\u0a82\u0aa8\u0ac7 \u0aac\u0abe\u0a9c\u0ac1 \u0a95\u0a82\u0a88 \u0aac\u0abe\u0a95\u0ac0 \u0aa8\u0aa5\u0ac0.',
+    'Switch to Received': '\u0aae\u0ab3\u0acd\u0aaf\u0abe \u0aaa\u0ab0 \u0a9c\u0abe\u0a93',
+    'Switch to Paid': '\u0a9a\u0ac2\u0a95\u0ab5\u0acd\u0aaf\u0abe \u0aaa\u0ab0 \u0a9c\u0abe\u0a93',
+    'Open on this ledger': '\u0a86 \u0a96\u0abe\u0aa4\u0abe\u0aae\u0abe\u0a82 \u0aac\u0abe\u0a95\u0ac0',
     'Waiting to post': '\u0aa8\u0acb\u0a82\u0aa7\u0abe\u0ab5\u0abe\u0aa8\u0ac0 \u0ab0\u0abe\u0ab9\u0aae\u0abe\u0a82',
     'Refused': '\u0aa8\u0a95\u0abe\u0ab0\u0abe\u0aaf\u0ac1\u0a82',
     'Save': '\u0ab8\u0abe\u0a9a\u0ab5\u0acb',
@@ -1249,6 +1255,24 @@
     return { bills: out, sum: Math.round(sum * 100) / 100 };
   }
 
+  /** Open totals of the unfiltered list, per side, from MONEY.raw (already held). */
+  function openTotals() {
+    var dr = 0, cr = 0;
+    MONEY.raw.forEach(function (b) { if (b.side === 'Dr') dr += b.open; else cr += b.open; });
+    return { dr: Math.round(dr * 100) / 100, cr: Math.round(cr * 100) / 100 };
+  }
+  /** The side the chosen kind does NOT show, and what is open on it. */
+  function otherSide() {
+    var o = openTotals(), dr = MONEY.kind === 'Paid';   // Paid shows Cr, so the hidden side is Dr
+    return { side: dr ? 'Dr' : 'Cr', total: dr ? o.dr : o.cr };
+  }
+  function positionText() {
+    var o = openTotals(), parts = [];
+    if (o.dr > 0.004) parts.push(money(o.dr) + ' Dr');
+    if (o.cr > 0.004) parts.push(money(o.cr) + ' Cr');
+    return esc(parts.length ? parts.join(' \u00b7 ') : '0.00');
+  }
+
   function drawBills() {
     var box = $('mbills');
     if (!box || VIEW !== 'money') return;
@@ -1257,10 +1281,25 @@
     if (!m.billsFor) { box.innerHTML = m.loadErr ? '<p class="error">' + esc(m.loadErr) + '</p>' : ''; return; }
 
     var html = '<div class="card"><div class="head"><b>' + t('Which bills does this clear?') + '</b></div>';
+    if (!m.loading) html += '<p class="note">' + t('Open on this ledger') + ': ' + positionText() + '</p>';
     if (m.loading) {
       html += '<p class="note">' + t('Loading…') + '</p>';
     } else if (!m.bills.length) {
-      html += '<p class="note">' + t('No open bills.') + '</p>';
+      var oth = otherSide();
+      if (oth.total) {
+        // Normal, not a mistake: the open items are on the other side.
+        var toRec = m.kind === 'Received';       // empty Received means only Cr items exist
+        var tpl = toRec
+          ? 'Nothing here for a receipt. This ledger has {n} {s} open, which a Paid clears.'
+          : 'Nothing here for a payment. This ledger has {n} {s} open, which a Received clears.';
+        var go = toRec ? 'Paid' : 'Received';
+        html += '<p class="note">' +
+          esc(t(tpl).replace('{n}', money(oth.total)).replace('{s}', oth.side)) + '</p>' +
+          '<button class="more" id="mswitch" style="margin-top:8px">' +
+          esc(t('Switch to ' + go)) + '</button>';
+      } else {
+        html += '<p class="note">' + t('This ledger is square. Nothing is open on either side.') + '</p>';
+      }
     } else {
       m.bills.forEach(function (b, i) {
         html += '<label class="tick"><input type="checkbox" data-b="' + i + '"' +
@@ -1287,6 +1326,8 @@
     }
     box.innerHTML = html + '</div>';
 
+    var sw = $('mswitch');
+    if (sw) sw.onclick = function () { setMoneyKind(m.kind === 'Received' ? 'Paid' : 'Received'); };
     Array.prototype.forEach.call(box.querySelectorAll('[data-b]'), function (el) {
       el.onchange = function () {
         m.ticked[+el.dataset.b] = el.checked;
