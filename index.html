@@ -590,7 +590,9 @@
         try { localStorage.setItem('ledger_token', TOKEN); } catch (e) {}
         $('p').value = '';
         $('go').disabled = false; $('go').textContent = t('Sign in');
-        start();
+        // Sign-in brings the first screenful back with it. Absent (an older
+        // server, or the prefetch threw), start() asks for it itself.
+        start(r.boot || null);
       })
       .catch(function (e) {
         $('go').disabled = false; $('go').textContent = t('Sign in');
@@ -2176,29 +2178,54 @@
 
   // --- the ledgers ----------------------------------------------------------
 
-  function start() {
+  /**
+   * Open the app. `pre` is the boot payload sign-in already brought back; with
+   * nothing passed (a token restored from storage) it is fetched in one call.
+   *
+   * Every request to /exec costs 1.3-2.1 seconds before it does any work, so
+   * what this used to cost was not the reading but the WAITING: periods, then
+   * parties, one after the other, each paying that toll. Both now arrive
+   * together — see getBoot in WebApp.gs.
+   */
+  function start(pre) {
     $('signin').hidden = true; $('app').hidden = false;
     $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
     stillHere();
-    api('periods', { token: TOKEN })
-      .then(function (r) {
-        buildPeriods(r.data);
-        showRights(r.data);
 
-        // Asking for the party list when Ledgers is not this login's would be
-        // refused by the server — correctly — and the app would open on an
-        // error instead of on the screen they do have.
+    // A page cached from before this change, talking to a server that has it,
+    // still works; so does the other way round, through the catch below.
+    var got = pre
+      ? Promise.resolve(pre)
+      : api('boot', { token: TOKEN }).then(function (r) { return r.data; })
+          .catch(function (e) {
+            if (e.expired) throw e;          // a dead token is not a missing action
+            return api('periods', { token: TOKEN })
+              .then(function (r) { return { periods: r.data, parties: null }; });
+          });
+
+    got
+      .then(function (b) {
+        buildPeriods(b.periods);
+        showRights(b.periods);
+
         // Sent on EVERY load, English included. The list is what fills the App
         // Words tab, and gating it on Gujarati meant the tab did not exist
         // until somebody was already using the language — so the one place to
         // change the wording could not be found until it was too late to need.
         //
         // Not waited for: the app is already readable in its own words, and a
-        // slow dictionary should not hold up the ledgers.
+        // slow dictionary should not hold up the ledgers. It is also why it is
+        // not part of the boot reply — the phone sends the phrase list, so the
+        // server cannot build it, and it costs no waiting as it is.
         loadWords();
 
+        // Asking for the party list when Ledgers is not this login's would be
+        // refused by the server — correctly — and the app would open on an
+        // error instead of on the screen they do have. getBoot makes the same
+        // test and sends no list in that case.
         if (!canSeeAnyLedger()) { firstAllowedScreen(); return null; }
         if (TABS[LIST] === false) LIST = LIST === 'expenses' ? 'ledgers' : 'expenses';
+        if (b.parties) return { data: b.parties };
         return api('parties', { token: TOKEN, from: PERIOD.from, to: PERIOD.to });
       })
       .then(function (r) { if (!r) return; parties = r.data; backToList(); })
@@ -2726,6 +2753,16 @@
   $('search').oninput = function () { showList(this.value); };
 
   localizeStatic();
+
+  // Wake the server while the password is being typed (owner, 30 Oct 2026).
+  // Apps Script lets an idle instance go, and the first call afterwards takes
+  // about three seconds against the usual 1.3-2.1 — so sign-in was paying for
+  // the cold start as well as its own work. This is a GET of `ping`, which
+  // reads nothing, writes nothing, needs no token and returns no data; it is
+  // sent for its timing alone and its reply is thrown away. A failure here
+  // means nothing: it is not on the path to anything.
+  if (!TOKEN) { try { fetch(API + '?action=ping').catch(function () {}); } catch (e) {} }
+
   if (TOKEN) start();
 </script>
 </body>
