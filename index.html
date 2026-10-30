@@ -891,6 +891,21 @@
         '<div class="l"><span class="note">' + esc(PERIOD.label) + '</span>' +
         '<span class="note">' + (d.net >= 0 ? 'profit' : 'loss') + '</span></div></div>';
 
+      // The owner's own figure, kept by him on the right of Jolly's Production
+      // tab (owner, 30 Oct 2026). It is BELOW the Net and counted in nothing —
+      // the server does not add it to any total and neither does this. An older
+      // server, or a cell nobody has filled in, sends null and the block is
+      // simply absent: a 0.00 here would say "the difference is nil", which is
+      // not what an empty cell means.
+      if (typeof d.current === 'number') {
+        html += '<div class="pl"><div class="l">' +
+          '<span>' + t('Current') + '</span>' +
+          '<span class="v">' + money(d.current) + '</span></div>' +
+          '<div class="l"><span class="note">' +
+          'kept by hand, not part of the figures above' +
+          '</span><span></span></div></div>';
+      }
+
       $('main').innerHTML = html;
     }).catch(fail);
   }
