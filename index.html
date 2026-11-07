@@ -28,9 +28,14 @@
   :root {
     --bg: #f6f7f9;  --card: #ffffff;  --ink: #16181d;  --muted: #6b7280;
     --line: #e5e7eb; --dr: #b3261e;   --cr: #12603c;   --accent: #1a56db;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root {
+      /* Tells the browser the page is dark, so the open list of a dropdown
+         (the months on Profit) is drawn dark with light text. Without it
+         Windows drew the list dark but left its text dark too (7 Nov 2026). */
+      color-scheme: dark;
       --bg: #101216; --card: #191c22; --ink: #e8eaed; --muted: #9aa1ad;
       --line: #2a2e37; --dr: #ff8a80; --cr: #6ddba0;  --accent: #7aa2f7;
     }
@@ -57,6 +62,7 @@
   [hidden] { display: none !important; }
   select { width: 100%; padding: 12px 13px; font-size: 16px; color: var(--ink);
            background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  select option { background: var(--card); color: var(--ink); }
   main { padding: 10px 12px 32px; }
 
   /* the order form */
@@ -345,6 +351,7 @@
     'Sales': '\u0ab5\u0ac7\u0a9a\u0abe\u0aa3',
     'Cost of goods sold': '\u0ab5\u0ac7\u0a9a\u0abe\u0aaf\u0ac7\u0ab2\u0abe \u0aae\u0abe\u0ab2\u0aa8\u0ac0 \u0aaa\u0aa1\u0aa4\u0ab0',
     'Gross profit': '\u0a95\u0ac1\u0ab2 \u0aa8\u0aab\u0acb',
+    'Last entry in Jolly': 'Jolly \u0aae\u0abe\u0a82 \u0a9b\u0ac7\u0ab2\u0acd\u0ab2\u0ac0 \u0aa8\u0acb\u0a82\u0aa7',
     // The heading of the per-item card on the Profit screen. Worded to match
     // 'Cost of goods sold' above \u2014 \u0ab5\u0ac7\u0a9a\u0abe\u0aaf\u0ac7\u0ab2\u0acb \u0aae\u0abe\u0ab2, the goods that went out \u2014
     // rather than a literal "what was sold", so the two lines read as a pair.
@@ -773,7 +780,7 @@
   }
 
   function reload() {
-    if (VIEW === 'pl') { showProfitLoss(); return; }
+    if (VIEW === 'pl') { showProfitLoss(true); return; }
     // One request serves both ledger screens, so it is asked for whenever
     // EITHER is allowed. Testing only Ledgers here sent a login that has just
     // Expenses to firstAllowedScreen(), which opens Expenses, which arrives
@@ -795,7 +802,30 @@
 
   // --- profit & loss --------------------------------------------------------
 
-  function showProfitLoss() {
+  /**
+   * The year and every month so far, fetched together when Profit opens (one
+   * round trip; §4k), so changing month afterwards draws at once. Kept only in
+   * this page, never on the server, and only for PL_KEEP_MS. Tapping the Profit
+   * tab always fetches afresh, so a just-posted entry is never hidden for long.
+   */
+  var PL_CACHE = { at: 0, data: {} };
+  var PL_KEEP_MS = 5 * 60 * 1000;
+
+  function todayIso() {
+    var d = new Date(), two = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate());
+  }
+
+  function plPeriodsToFetch() {
+    if (!FY) return null;
+    var key = PERIOD.from + '|' + PERIOD.to, today = todayIso();
+    var list = [{ from: FY.from, to: FY.to }];
+    FY.months.forEach(function (m) { if (m.from <= today) list.push({ from: m.from, to: m.to }); });
+    // A typed range is not one of these: it is asked for on its own.
+    return list.some(function (p) { return p.from + '|' + p.to === key; }) ? list : null;
+  }
+
+  function showProfitLoss(mayUseKept) {
     mark('showProfitLoss');
     if (!CAN_PL) { backToList(); return; }
     VIEW = 'pl';
@@ -806,10 +836,40 @@
     $('title').textContent = t('Profit');
     $('main').innerHTML = '<div class="empty">' + t('Loading…') + '</div>';
 
+    var key = PERIOD.from + '|' + PERIOD.to;
+    if (mayUseKept !== true) PL_CACHE = { at: 0, data: {} };   // a tap on the tab: fresh
+    if (Date.now() - PL_CACHE.at < PL_KEEP_MS && PL_CACHE.data[key]) {
+      drawProfitLoss(PL_CACHE.data[key]);
+      return;
+    }
+
     var ticket = takeTicket();
-    api('pnl', { token: TOKEN, from: PERIOD.from, to: PERIOD.to }).then(function (r) {
+    var set = plPeriodsToFetch();
+    var asked = set
+      ? api('pnlSet', { token: TOKEN, periods: set }).then(function (r) {
+          var kept = { at: Date.now(), data: {} };
+          (r.data || []).forEach(function (x) { kept.data[x.from + '|' + x.to] = x.data; });
+          PL_CACHE = kept;
+          if (!kept.data[key]) throw new Error('The period on screen was not in the reply.');
+          return kept.data[key];
+        }).catch(function (e) {
+          // An older server without pnlSet: ask for this period alone, as before.
+          if (/Unknown action/.test(e.message)) {
+            return api('pnl', { token: TOKEN, from: PERIOD.from, to: PERIOD.to })
+              .then(function (r) { return r.data; });
+          }
+          throw e;
+        })
+      : api('pnl', { token: TOKEN, from: PERIOD.from, to: PERIOD.to })
+          .then(function (r) { return r.data; });
+
+    asked.then(function (d) {
       if (!stillWanted(ticket)) return;
-      var d = r.data;
+      drawProfitLoss(d);
+    }).catch(fail);
+  }
+
+  function drawProfitLoss(d) {
 
       // Sales are at goods value: GST collected is not income, it passes
       // through. And a purchase is not a cost — it turns money into stock. The
@@ -903,11 +963,24 @@
           '<span class="v">' + money(d.current) + '</span></div>' +
           '<div class="l"><span class="note">' +
           'kept by hand, not part of the figures above' +
-          '</span><span></span></div></div>';
+          '</span><span></span></div>' + lastEntryLines(d.lastEntry) + '</div>';
+      } else if (d.lastEntry) {
+        html += '<div class="pl">' + lastEntryLines(d.lastEntry) + '</div>';
       }
 
       $('main').innerHTML = html;
-    }).catch(fail);
+  }
+
+  // The date of the last entry posted from Jolly, beside Current (owner, 7 Nov
+  // 2026), and each daily tab's own last date under it, so a tab that has fallen
+  // behind shows. Whole books, not the period on screen. Absent on an older server.
+  function lastEntryLines(le) {
+    if (!le || !le.date) return '';
+    return '<div class="l"><span>' + t('Last entry in Jolly') + '</span>' +
+      '<span class="v">' + esc(le.date) + '</span></div>' +
+      '<div class="l"><span class="note">' +
+      (le.byTab || []).map(function (x) { return esc(x.tab) + ' ' + esc(x.date); }).join(' · ') +
+      '</span><span></span></div>';
   }
 
   function line(label, value, cls2) {
