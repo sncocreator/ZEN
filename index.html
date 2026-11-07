@@ -167,6 +167,19 @@
     color: var(--ink); background: var(--card);
     border: 1px solid var(--line); border-radius: 10px;
   }
+  .pickbtn { text-align: left; font: inherit; font-size: 14px; }
+  .pickbtn::after { content: '\25BE'; float: right; color: var(--muted); }
+  .picklist {
+    margin-top: 6px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden;
+  }
+  .picklist button {
+    display: block; width: 100%; text-align: left; padding: 10px 12px;
+    font: inherit; font-size: 14px; color: var(--ink); background: var(--card);
+    border: 0; border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  .picklist button:last-child { border-bottom: 0; }
+  .picklist button.on { color: var(--accent); font-weight: 600; }
   .range { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   .range input { padding: 8px 10px; font-size: 14px; }
 
@@ -751,7 +764,34 @@
       html += '<option value="m' + i + '">' + esc(m.label) + ' ' + m.year + '</option>';
     });
     html += '<option value="range">Dates…</option></select>';
+
+    // The list is drawn by the page, not by the browser (7 Nov 2026). Windows
+    // drew the native drop-down's month names invisible on the dark page even
+    // with colours set on every option, so the <select> above is kept hidden as
+    // the holder of the choice, and this button and list stand in for its popup.
+    html += '<button type="button" id="pickBtn" class="pick pickbtn">' + esc(fy.label) + '</button>' +
+            '<div id="pickList" class="picklist" hidden>' +
+            '<button type="button" data-v="fy">' + esc(fy.label) + '</button>';
+    fy.months.forEach(function (m, i) {
+      html += '<button type="button" data-v="m' + i + '">' + esc(m.label) + ' ' + m.year + '</button>';
+    });
+    html += '<button type="button" data-v="range">Dates…</button></div>';
     $('periods').innerHTML = html;
+    $('periodPick').hidden = true;
+
+    $('pickBtn').onclick = function () { $('pickList').hidden = !$('pickList').hidden; };
+    Array.prototype.forEach.call($('pickList').querySelectorAll('button'), function (b) {
+      b.onclick = function () {
+        $('pickList').hidden = true;
+        $('pickBtn').textContent = b.textContent;
+        Array.prototype.forEach.call($('pickList').querySelectorAll('button'),
+          function (x) { x.classList.toggle('on', x === b); });
+        if ($('periodPick').value === b.dataset.v && b.dataset.v !== 'range') return;
+        $('periodPick').value = b.dataset.v;
+        $('periodPick').onchange.call($('periodPick'));
+      };
+    });
+    $('pickList').querySelector('button').classList.add('on');
 
     $('periodPick').onchange = function () {
       var k = this.value;
