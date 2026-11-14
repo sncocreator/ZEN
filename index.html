@@ -241,6 +241,7 @@
       <button class="tab" id="tabExpenses">Expenses</button>
       <button class="tab" id="tabOrders">Orders</button>
       <button class="tab" id="tabMoney">Money</button>
+      <button class="tab" id="tabProduction">Production</button>
       <button class="tab" id="tabRecent">Recent</button>
       <button class="tab" id="tabPL">Profit</button>
     </div>
@@ -522,7 +523,7 @@
     [['signinNote', 'Sign in to continue.'],
      ['go', 'Sign in'], ['out', 'Sign out'], ['back', backLabel()],
      ['tabLedgers', 'Ledgers'], ['tabExpenses', 'Expenses'],
-     ['tabOrders', 'Orders'], ['tabMoney', 'Money'],
+     ['tabOrders', 'Orders'], ['tabMoney', 'Money'], ['tabProduction', 'Production'],
      ['tabRecent', 'Recent'], ['tabPL', 'Profit'],
      ['rangeTo', 'to'], ['apply', 'Apply']
     ].forEach(function (pair) {
@@ -696,7 +697,7 @@
   var CAN_PL = true;
 
   /** Which screens this login may open, keyed as the App Access tab keys them. */
-  var TABS = { ledgers: true, expenses: true, orders: true, recent: true, pnl: true, money: true };
+  var TABS = { ledgers: true, expenses: true, orders: true, recent: true, pnl: true, money: true, production: true };
 
   function showRights(fy) {
     // The language travels with the rights because both answer the same
@@ -717,13 +718,14 @@
     $('tabExpenses').hidden = TABS.expenses === false;
     $('tabOrders').hidden  = TABS.orders  === false;
     $('tabMoney').hidden   = TABS.money   === false;
+    $('tabProduction').hidden = TABS.production === false;
     $('tabRecent').hidden  = TABS.recent  === false;
     $('tabPL').hidden      = !CAN_PL;
 
     // Standing on a screen that has just been taken away, go somewhere allowed
     // rather than sitting on a dead tab waiting for a refusal.
     var on = { ledgers: 'ledgers', expenses: 'expenses', orders: 'orders',
-               recent: 'recent', pl: 'pnl', money: 'money' }[VIEW];
+               recent: 'recent', pl: 'pnl', money: 'money', production: 'production' }[VIEW];
     if (on && TABS[on] === false) firstAllowedScreen();
   }
 
@@ -745,6 +747,7 @@
     if (TABS.expenses !== false) return showExpenses();
     if (TABS.orders  !== false) return showOrders();
     if (TABS.money   !== false) return showMoney();
+    if (TABS.production !== false) return showProduction();
     if (TABS.recent  !== false) return showRecent();
     if (TABS.pnl     !== false) return showProfitLoss();
     $('main').innerHTML = '<div class="empty">' +
@@ -1113,7 +1116,7 @@
   }
 
   function setTab(which) {
-    ['tabLedgers', 'tabExpenses', 'tabOrders', 'tabMoney', 'tabRecent', 'tabPL'].forEach(function (id) {
+    ['tabLedgers', 'tabExpenses', 'tabOrders', 'tabMoney', 'tabProduction', 'tabRecent', 'tabPL'].forEach(function (id) {
       $(id).classList.toggle('on', id === which);
     });
   }
@@ -1601,6 +1604,145 @@
           $('merr').hidden = false;
         }
       });
+  }
+
+  // --- the Production tab: the day's production, entered here and nowhere else ---
+
+  /**
+   * Enter one day's production (Production.gs). The server writes the Stock Register
+   * and the Reco and records the day on the Production sheet; it refuses a day that
+   * is already there, a date before 1 April 2026 or in the future, and a layout it
+   * does not recognise. This screen prints the server's sentence as it is.
+   */
+  var PROD = null, prodSaving = false, PROD_RECENT = null, prodRecentErr = '';
+  var PROD_FIELDS = [['plastic', 'Plastic typed'], ['wax', 'Wax'], ['fuel', 'Fuel oil'],
+                     ['carbon', 'Carbon'], ['self', 'Self consumption']];
+
+  function freshProd(keep) {
+    return { date: (keep && keep.date) || todayISO(), plastic: '', wax: '', fuel: '', carbon: '',
+             self: '', note: '', msg: '' };
+  }
+
+  /** 2026-10-23 -> 23-10-2026, the order the server reads. */
+  function prodDayFirst(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    return m ? m[3] + '-' + m[2] + '-' + m[1] : iso;
+  }
+
+  function showProduction() {
+    mark('showProduction');
+    VIEW = 'production';
+    current = null;
+    setTab('tabProduction');
+    $('search').hidden = true; $('back').hidden = true;
+    $('periods').hidden = true; $('range').hidden = true;
+    $('title').textContent = t('Production');
+    if (!PROD) PROD = freshProd();
+    drawProduction();
+    loadProdRecent();
+  }
+
+  function drawProduction() {
+    var p = PROD;
+    var html =
+      (p.msg ? '<div class="msg" style="margin-top:0;margin-bottom:12px">' + esc(p.msg) + '</div>' : '') +
+      '<div class="field"><label>' + t('Date') + '</label>' +
+        '<input type="date" id="pdate" value="' + esc(p.date) + '"></div>' +
+      '<div class="g2">' +
+        PROD_FIELDS.map(function (f) {
+          return '<div class="field"><label>' + t(f[1]) + '</label>' +
+            '<input type="number" inputmode="decimal" step="any" min="0" id="p_' + f[0] +
+            '" value="' + esc(p[f[0]]) + '"></div>';
+        }).join('') +
+      '</div>' +
+      '<div class="field"><label>' + t('Note') + ' <span class="note">' + t('opt.') + '</span></label>' +
+        '<input id="pnote" autocomplete="off" value="' + esc(p.note) + '"></div>' +
+      '<p class="error" id="perr" hidden></p>' +
+      '<button class="primary" id="psave">' + t('Send') + '</button>' +
+      '<div id="precent"></div>';
+    $('main').innerHTML = html;
+    $('pdate').onchange = $('pdate').oninput = function () { p.date = this.value; };
+    PROD_FIELDS.forEach(function (f) {
+      $('p_' + f[0]).oninput = function () { p[f[0]] = this.value; };
+    });
+    $('pnote').oninput = function () { p.note = this.value; };
+    $('psave').onclick = saveProduction;
+    drawProdRecent();
+  }
+
+  function saveProduction() {
+    if (prodSaving) return;               // a double tap must not become two entries
+    var p = PROD;
+    prodSaving = true;
+    $('psave').disabled = true;
+    $('psave').textContent = t('Saving…');
+    $('perr').hidden = true;
+    api('addProduction', { token: TOKEN, date: prodDayFirst(p.date), plastic: p.plastic, wax: p.wax,
+                           fuel: p.fuel, carbon: p.carbon, self: p.self, note: p.note.trim() })
+      .then(function (r) {
+        prodSaving = false;
+        var d = r.data || {};
+        if (d.sent) {
+          PROD = freshProd(p);            // a fresh form: nothing typed can be sent twice
+          PROD.msg = d.message || '';
+          if (VIEW === 'production') drawProduction();
+          loadProdRecent();
+        } else if ($('psave')) {
+          // A refusal is an answer, not a fault: the figures stay so they can be corrected.
+          $('psave').disabled = false;
+          $('psave').textContent = t('Send');
+          $('perr').textContent = d.reason || 'Not sent.';
+          $('perr').hidden = false;
+        }
+      })
+      .catch(function (e) {
+        prodSaving = false;
+        if (e.expired) { fail(e); return; }
+        if ($('psave')) {
+          $('psave').disabled = false;
+          $('psave').textContent = t('Send');
+          $('perr').textContent = e.message;
+          $('perr').hidden = false;
+        }
+      });
+  }
+
+  var prodRecentSeq = 0;
+  function loadProdRecent() {
+    var seq = ++prodRecentSeq;
+    return api('productionRecent', { token: TOKEN })
+      .then(function (r) {
+        if (seq !== prodRecentSeq) return;
+        PROD_RECENT = (r.data && r.data.entries) || []; prodRecentErr = '';
+        drawProdRecent();
+      })
+      .catch(function (e) {
+        if (seq !== prodRecentSeq) return;
+        if (e.expired) { fail(e); return; }
+        prodRecentErr = e.message;
+        drawProdRecent();
+      });
+  }
+
+  function drawProdRecent() {
+    var box = $('precent');
+    if (!box || VIEW !== 'production') return;
+    if (prodRecentErr) { box.innerHTML = '<p class="error">' + esc(prodRecentErr) + '</p>'; return; }
+    if (!PROD_RECENT) { box.innerHTML = '<div class="empty">' + t('Loading…') + '</div>'; return; }
+    if (!PROD_RECENT.length) {
+      box.innerHTML = '<div class="empty">' + t('Nothing has been sent from this screen yet.') + '</div>';
+      return;
+    }
+    box.innerHTML = '<div class="card"><div class="head"><b class="note">' + t('Last sent') + '</b></div>' +
+      PROD_RECENT.map(function (e) {
+        var parts = [];
+        [['plastic', 'Plastic typed'], ['wax', 'Wax'], ['fuel', 'Fuel oil'], ['carbon', 'Carbon'],
+         ['self', 'Self consumption']].forEach(function (f) {
+          if (e[f[0]] !== '' && e[f[0]] != null) parts.push(t(f[1]) + ' ' + esc(e[f[0]]));
+        });
+        return '<div class="note" style="margin-top:8px"><b>' + esc(e.date) + '</b> · ' + parts.join(' · ') +
+          (e.note ? '<br>' + esc(e.note) : '') + '</div>';
+      }).join('') + '</div>';
   }
 
   // --- what has been posted lately ------------------------------------------
@@ -2970,6 +3112,7 @@
   $('tabExpenses').onclick = showExpenses;
   $('tabOrders').onclick = showOrders;
   $('tabMoney').onclick = showMoney;
+  $('tabProduction').onclick = showProduction;
   $('tabRecent').onclick = showRecent;
   $('tabPL').onclick = showProfitLoss;
   $('search').oninput = function () { showList(this.value); };
